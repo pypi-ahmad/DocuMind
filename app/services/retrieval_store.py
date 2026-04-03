@@ -1,12 +1,17 @@
+"""Retrieval store facade — delegates to in-memory or Milvus backend based on config."""
+
 from typing import Any
 
-import numpy as np
+from app.core.settings import settings
 
+# --- In-memory backend (default) ---
+
+import numpy as np
 
 _records: list[dict[str, Any]] = []
 
 
-def add_documents(records: list[dict[str, Any]]) -> int:
+def _memory_add_documents(records: list[dict[str, Any]]) -> int:
     added = 0
     for record in records:
         _records.append({
@@ -20,7 +25,7 @@ def add_documents(records: list[dict[str, Any]]) -> int:
     return added
 
 
-def search(query_vector: list[float], top_k: int = 5) -> list[dict[str, Any]]:
+def _memory_search(query_vector: list[float], top_k: int = 5) -> list[dict[str, Any]]:
     if not _records:
         return []
 
@@ -53,11 +58,11 @@ def search(query_vector: list[float], top_k: int = 5) -> list[dict[str, Any]]:
     return results
 
 
-def clear_store() -> None:
+def _memory_clear_store() -> None:
     _records.clear()
 
 
-def list_documents() -> list[dict[str, Any]]:
+def _memory_list_documents() -> list[dict[str, Any]]:
     doc_map: dict[str, dict[str, Any]] = {}
     for record in _records:
         doc_id = record["doc_id"]
@@ -71,7 +76,7 @@ def list_documents() -> list[dict[str, Any]]:
     return list(doc_map.values())
 
 
-def get_records() -> list[dict[str, Any]]:
+def _memory_get_records() -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for record in _records:
         records.append(
@@ -84,3 +89,45 @@ def get_records() -> list[dict[str, Any]]:
             }
         )
     return records
+
+
+# --- Dispatch ---
+
+def _use_milvus() -> bool:
+    return settings.vector_store_backend.strip().lower() == "milvus"
+
+
+def add_documents(records: list[dict[str, Any]]) -> int:
+    if _use_milvus():
+        from app.services.milvus_store import add_documents as _milvus_add
+        return _milvus_add(records)
+    return _memory_add_documents(records)
+
+
+def search(query_vector: list[float], top_k: int = 5) -> list[dict[str, Any]]:
+    if _use_milvus():
+        from app.services.milvus_store import search as _milvus_search
+        return _milvus_search(query_vector, top_k)
+    return _memory_search(query_vector, top_k)
+
+
+def clear_store() -> None:
+    if _use_milvus():
+        from app.services.milvus_store import clear_store as _milvus_clear
+        _milvus_clear()
+        return
+    _memory_clear_store()
+
+
+def list_documents() -> list[dict[str, Any]]:
+    if _use_milvus():
+        from app.services.milvus_store import list_documents as _milvus_list
+        return _milvus_list()
+    return _memory_list_documents()
+
+
+def get_records() -> list[dict[str, Any]]:
+    if _use_milvus():
+        from app.services.milvus_store import get_records as _milvus_get
+        return _milvus_get()
+    return _memory_get_records()

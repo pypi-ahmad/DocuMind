@@ -4,8 +4,13 @@
 
 DocuMind is a single-process FastAPI application that exposes REST endpoints for
 document OCR, LLM post-processing, retrieval-augmented QA, evaluation, and a
-browser-based UI. Everything runs in one Python process with an in-memory async
-job queue — no external databases, brokers, or containers are required.
+browser-based UI. By default everything runs in one Python process with in-memory
+stores — no external databases, brokers, or containers are required.
+
+Optionally, the vector store can be switched to **Milvus** and the job queue to
+**Redis** for persistent, multi-node operation.  A standalone worker CLI
+(`python -m app.workers.cli`) allows job execution to run in separate processes.
+JWT-based authentication can be enabled via configuration.
 
 ```
 ┌─────────────┐        ┌──────────────────────────────────────────────────┐
@@ -34,8 +39,10 @@ job queue — no external databases, brokers, or containers are required.
                        │                                └───────────────┘  │
                        │  ┌───────────────────────────────────────────┐    │
                        │  │  Workers (app/workers/)                   │    │
-                       │  │   queue.py — in-memory async queue        │    │
+                       │  │   queue.py — facade (memory / Redis)      │    │
                        │  │   worker.py — background job processor    │    │
+                       │  │   redis_queue.py — Redis-backed queue     │    │
+                       │  │   cli.py — standalone worker process      │    │
                        │  └───────────────────────────────────────────┘    │
                        │  ┌───────────────────────────────────────────┐    │
                        │  │  Eval (app/eval/)                         │    │
@@ -43,6 +50,12 @@ job queue — no external databases, brokers, or containers are required.
                        │  │   stress                                  │    │
                        │  └───────────────────────────────────────────┘    │
                        └──────────────────────────────────────────────────┘
+
+                       Optional external services (when configured):
+                       ┌──────────────┐   ┌──────────────┐
+                       │  Milvus      │   │  Redis       │
+                       │  (vectors)   │   │  (job queue) │
+                       └──────────────┘   └──────────────┘
 ```
 
 ## Major Modules
@@ -75,7 +88,8 @@ Domain logic that glues providers, OCR, and retrieval together:
 | `indexing` | Orchestrate extract → chunk → embed → store |
 | `chunking` | Split text into overlapping chunks |
 | `embedding_service` | Generate vector embeddings via a provider |
-| `retrieval_store` | In-memory document store with vector + sparse index |
+| `retrieval_store` | Document store facade — in-memory or Milvus backend |
+| `milvus_store` | Milvus-backed vector store implementation |
 | `sparse_retrieval` | BM25-based sparse search |
 | `hybrid_retrieval` | Merge dense and sparse results |
 | `reranker` | Cross-encoder–style reranking of search results |
@@ -84,7 +98,12 @@ Domain logic that glues providers, OCR, and retrieval together:
 
 ### `app/workers/`
 
-An in-memory `asyncio.Queue` and a single background task that processes jobs.
+Job queue facade (`queue.py`) dispatches to an in-memory `asyncio.Queue` or a
+Redis-backed queue (`redis_queue.py`) based on `DOCUMIND_JOB_QUEUE_BACKEND`.
+A background task (`worker.py`) processes jobs in the main FastAPI process.
+For multi-node deployments, `cli.py` provides a standalone worker process that
+dequeues jobs from Redis independently.
+
 Jobs are created via `POST /jobs` and polled via `GET /jobs/{job_id}`. API keys
 in job inputs are stripped from the stored job record and held separately until
 execution, then cleared.
@@ -99,10 +118,11 @@ driver, all exposed through `/eval/*` endpoints.
 Cross-cutting concerns:
 
 - `settings.py` — pydantic-settings with `.env` support and alias-based key resolution.
+- `auth.py` — JWT authentication: token creation, validation, login endpoint, `get_current_user` dependency.
 - `pipelines.py` — static pipeline definitions (steps, required fields).
 - `model_manager.py` — Ollama model pull/activation lifecycle.
 - `errors.py` — global exception handlers.
-- `middleware.py` — request ID injection and timing headers.
+- `middleware.py` — request ID injection, timing headers, and optional auth enforcement.
 - `logging.py` — structured logging configuration.
 
 ---

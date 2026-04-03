@@ -83,7 +83,7 @@ app/
 ├── providers/      # LLM provider adapters (BaseProvider ABC)
 ├── ocr/            # OCR engine adapters (BaseOCREngine ABC)
 ├── services/       # Domain logic (indexing, QA, reranking, etc.)
-├── workers/        # In-memory async job queue + worker
+├── workers/        # Job queue facade (memory / Redis) + worker + CLI
 ├── eval/           # Benchmarks, evaluator, metrics, stress tests
 └── schemas/        # Pydantic request/response models
 ```
@@ -167,6 +167,41 @@ resolution, but alias-based resolution also supports bare names (e.g.
 `OPENAI_API_KEY` resolves the same as `DOCUMIND_OPENAI_API_KEY`).
 
 See `.env.example` for a reference of available variables.
+
+### Infrastructure Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOCUMIND_VECTOR_STORE_BACKEND` | `memory` | `memory` or `milvus` |
+| `DOCUMIND_MILVUS_URI` | `http://localhost:19530` | Milvus connection URI |
+| `DOCUMIND_MILVUS_COLLECTION_NAME` | `documind_chunks` | Milvus collection name |
+| `DOCUMIND_MILVUS_VECTOR_DIM` | `768` | Embedding vector dimension |
+| `DOCUMIND_JOB_QUEUE_BACKEND` | `memory` | `memory` or `redis` |
+| `DOCUMIND_REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
+| `DOCUMIND_AUTH_ENABLED` | `false` | Enable JWT authentication |
+| `DOCUMIND_AUTH_SECRET_KEY` | *(dev default)* | Secret for signing JWTs |
+| `DOCUMIND_AUTH_ADMIN_USERNAME` | `admin` | Login username |
+| `DOCUMIND_AUTH_ADMIN_PASSWORD` | `changeme` | Login password |
+| `DOCUMIND_AUTH_ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Token lifetime |
+
+---
+
+## Standalone Worker (Multi-Node)
+
+When using Redis as the job queue backend, you can run one or more standalone
+worker processes to dequeue and execute jobs independently of the API server:
+
+```bash
+# Ensure Redis backend is configured
+export DOCUMIND_JOB_QUEUE_BACKEND=redis
+export DOCUMIND_REDIS_URL=redis://localhost:6379/0
+
+# Start a worker
+python -m app.workers.cli
+```
+
+The worker loops indefinitely, processing jobs from the shared Redis queue.
+Multiple workers can run on different machines for horizontal scaling.
 
 ---
 

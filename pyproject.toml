@@ -10,8 +10,12 @@ dependencies = [
     "httpx>=0.28.1,<1.0.0",
     "numpy>=1.26.0,<3.0.0",
     "openai>=2.30.0,<3.0.0",
+    "PyJWT>=2.8.0,<3.0.0",
     "PyMuPDF>=1.24.0,<2.0.0",
+    "pymilvus>=2.4.0,<3.0.0",
+    "python-multipart>=0.0.7",
     "rank-bm25>=0.2.2,<1.0.0",
+    "redis>=5.0.0,<6.0.0",
     "uvicorn[standard]>=0.34.0,<1.0.0",
     "pydantic-settings>=2.7.0,<3.0.0",
 ]
@@ -28,3 +32,6 @@ asyncio_mode = "auto"
 [build-system]
 requires = ["setuptools>=75.0.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]

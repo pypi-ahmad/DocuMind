@@ -35,6 +35,25 @@ class Settings(BaseSettings):
     llm_default_max_output_tokens: int = Field(default=1024, gt=0)
     http_timeout_seconds: float = Field(default=10.0, gt=0)
 
+    # -- Milvus (vector store) --
+    vector_store_backend: str = "memory"  # "memory" or "milvus"
+    milvus_uri: str = "http://localhost:19530"
+    milvus_collection_name: str = "documind_chunks"
+    milvus_token: str = ""
+    milvus_vector_dim: int = Field(default=768, gt=0)
+
+    # -- Redis (job queue) --
+    job_queue_backend: str = "memory"  # "memory" or "redis"
+    redis_url: str = "redis://localhost:6379/0"
+
+    # -- Auth --
+    auth_enabled: bool = False
+    auth_secret_key: str = "change-me-in-production"
+    auth_algorithm: str = "HS256"
+    auth_access_token_expire_minutes: int = Field(default=30, gt=0)
+    auth_admin_username: str = "admin"
+    auth_admin_password: str = "admin"
+
     model_config = SettingsConfigDict(
         env_prefix="DOCUMIND_",
         env_file=".env",
