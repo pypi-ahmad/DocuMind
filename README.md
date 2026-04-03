@@ -1,6 +1,33 @@
-# DocuMind
+<p align="center">
+  <img src="docs/assets/documind-logo.svg" alt="DocuMind logo" width="170" />
+</p>
 
-OCR-first document intelligence platform for extracting, normalizing, structuring, indexing, and querying document content through a single API.
+<h1 align="center">🧠 DocuMind</h1>
+
+<p align="center"><strong>OCR-first document intelligence platform for extracting, normalizing, structuring, indexing, and querying document content through a single API.</strong></p>
+
+<p align="center">
+  <img alt="Python 3.12+" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-API-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-UI-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img alt="Ollama" src="https://img.shields.io/badge/Ollama-Local%20OCR-111827?style=for-the-badge&logo=ollama&logoColor=white" />
+</p>
+
+<p align="center">
+  <img alt="Hybrid Retrieval" src="https://img.shields.io/badge/Hybrid%20Retrieval-BM25%20%2B%20Vectors-0F172A?style=for-the-badge" />
+  <img alt="Milvus Optional" src="https://img.shields.io/badge/Milvus-Optional%20Vector%20Store-00A1EA?style=for-the-badge&logo=milvus&logoColor=white" />
+  <img alt="Redis Optional" src="https://img.shields.io/badge/Redis-Optional%20Job%20Queue-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+  <img alt="MIT License" src="https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge" />
+</p>
+
+<p align="center">
+  <img alt="OCR First" src="https://img.shields.io/badge/OCR-first-1E293B?style=flat-square" />
+  <img alt="Local First" src="https://img.shields.io/badge/local-first-1E293B?style=flat-square" />
+  <img alt="PDF OCR" src="https://img.shields.io/badge/PDF-multi--page%20support-1E293B?style=flat-square" />
+  <img alt="RAG QA" src="https://img.shields.io/badge/RAG-QA%20with%20citations-1E293B?style=flat-square" />
+  <img alt="Schema Driven UI" src="https://img.shields.io/badge/UI-schema--driven-1E293B?style=flat-square" />
+</p>
 
 DocuMind combines a FastAPI backend, a React UI, pluggable OCR engines, pluggable LLM providers, hybrid retrieval, and an evaluation harness in one local-first codebase. It can run fully on local models with Ollama or mix local OCR with cloud providers such as OpenAI, Gemini, and Anthropic.
 
@@ -8,63 +35,68 @@ Built with FastAPI, React 19, TypeScript, Python 3.12+, and Ollama-based OCR.
 
 ---
 
-## Why DocuMind
+## ✨ Why DocuMind
 
 Most document AI systems treat OCR as a hidden preprocessing step. DocuMind makes OCR the primary contract. Extraction, cleanup, structuring, indexing, summarization, and question answering all build on top of a concrete OCR result shape rather than burying the hard part of the problem behind a black box.
 
 That makes the repository useful for three different audiences:
 
-- engineers building document workflows without heavy infrastructure
-- teams comparing local and cloud providers behind a shared interface
-- maintainers and technical reviewers evaluating end-to-end backend and platform design in a single repository
+- 🛠️ engineers building document workflows without heavy infrastructure
+- 🔀 teams comparing local and cloud providers behind a shared interface
+- 🧪 maintainers and technical reviewers evaluating end-to-end backend and platform design in a single repository
 
 ---
 
-## What Is Implemented
+## ✅ What Is Implemented
 
 | Capability | Details |
 |------------|---------|
-| OCR extraction | DeepSeek-OCR and GLM-OCR via Ollama |
-| Multi-page document support | Images plus multi-page PDF splitting via PyMuPDF with per-page OCR results |
-| OCR post-processing | Cleanup, summary, and key-field extraction |
-| Provider abstraction | Ollama, OpenAI, Gemini, and Anthropic behind a shared provider contract |
-| Retrieval | Dense embeddings, BM25 sparse retrieval, and weighted hybrid search |
-| Reranking | LLM-based relevance rescoring for retrieved hits |
-| Document QA | Retrieval-augmented answers with source citations |
-| Async execution | Background job queue with polling and secret scrubbing (in-memory or Redis) |
-| BYOK | Per-request API keys with no browser persistence and no stored job secrets |
-| Persistent vector store | Optional Milvus backend for durable retrieval index |
-| Persistent job queue | Optional Redis backend for durable, multi-node job execution |
-| Authentication | Optional JWT-based auth with configurable admin credentials |
-| Multi-node workers | Standalone worker CLI for running job execution separately from the API |
-| Evaluation | Benchmark suites and stress tests exposed through the API |
-| UI contract | Schema-driven forms served by the backend |
+| 📄 OCR extraction | DeepSeek-OCR and GLM-OCR via Ollama |
+| 📚 Multi-page document support | Images plus multi-page PDF splitting via PyMuPDF with per-page OCR results |
+| 🧹 OCR post-processing | Cleanup, summary, and key-field extraction |
+| 🔌 Provider abstraction | Ollama, OpenAI, Gemini, and Anthropic behind a shared provider contract |
+| 🔎 Retrieval | Dense embeddings, BM25 sparse retrieval, and weighted hybrid search |
+| 🎯 Reranking | LLM-based relevance rescoring for retrieved hits |
+| 💬 Document QA | Retrieval-augmented answers with source citations |
+| ⏳ Async execution | Background job queue with polling and secret scrubbing (in-memory or Redis) |
+| 🔐 BYOK | Per-request API keys with no browser persistence and no stored job secrets |
+| 🗃️ Persistent vector store | Optional Milvus-backed retrieval store path for durable indexing |
+| 📮 Persistent job queue | Optional Redis-backed job queue and persisted job records |
+| 🛂 Authentication | Optional JWT-based login with configurable admin credentials |
+| 🚫 Authorization | Not yet implemented beyond token validation; no RBAC or multi-user policies |
+| 🧵 Multi-node workers | Standalone Redis worker CLI exists, but the API still starts its own worker by default |
+| 📈 Evaluation | Benchmark suites and stress tests exposed through the API |
+| 🧩 UI contract | Schema-driven forms served by the backend |
+
+The default development mode remains local-first: in-memory stores, one API process,
+and one in-process worker. Milvus, Redis, and JWT auth are optional infrastructure
+paths rather than the default runtime shape.
 
 ---
 
-## Supported Providers
+## 🔌 Supported Providers
 
 | Provider | Type | Embeddings | BYOK | Notes |
 |----------|------|------------|------|-------|
-| Ollama | Local | Yes | N/A | Supports local generation and embeddings |
-| OpenAI | Cloud | Yes | Yes | Per-request key can override server environment |
-| Gemini | Cloud | Yes | Yes | Same normalized response shape as other providers |
-| Anthropic | Cloud | No | Yes | Text generation only |
+| 🦙 Ollama | Local | Yes | N/A | Supports local generation and embeddings |
+| 🤖 OpenAI | Cloud | Yes | Yes | Per-request key can override server environment |
+| ✨ Gemini | Cloud | Yes | Yes | Same normalized response shape as other providers |
+| 🪶 Anthropic | Cloud | No | Yes | Text generation only |
 
 All providers implement the same base contract and return a normalized response with provider name, model name, generated text, token usage, and metadata.
 
-## Supported OCR Engines
+## 👁️ Supported OCR Engines
 
 | Engine | Model | Backend | Use case |
 |--------|-------|---------|----------|
-| DeepSeek-OCR | `deepseek-ocr:3b` | Ollama | General-purpose extraction |
-| GLM-OCR | `glm-ocr` | Ollama | More structured extraction for headings, lists, and tables |
+| 🔍 DeepSeek-OCR | `deepseek-ocr:3b` | Ollama | General-purpose extraction |
+| 🧾 GLM-OCR | `glm-ocr` | Ollama | More structured extraction for headings, lists, and tables |
 
 The OCR layer accepts single images (`.png`, `.jpg`, `.jpeg`, `.webp`) and multi-page PDFs (`.pdf`). PDFs are split into page images with PyMuPDF, each page is processed independently, and the final response includes both merged text and per-page OCR results.
 
 ---
 
-## End-to-End Flow
+## 🔄 End-to-End Flow
 
 ```text
 Document (image or PDF)
@@ -94,16 +126,16 @@ Document (image or PDF)
 
 ---
 
-## Core Workflows
+## ⚙️ Core Workflows
 
 | Workflow | What happens | Execution mode |
 |----------|--------------|----------------|
-| OCR Extract | OCR -> normalize -> structure | Direct or job |
-| OCR + Summary | OCR -> LLM summarization | Direct or job |
-| OCR + Key Fields | OCR -> LLM field extraction | Direct or job |
-| Index Document | OCR -> chunk -> embed -> store | Direct or job |
-| Ask Indexed Documents | Retrieve -> optional rerank -> answer with citations | Direct or job |
-| Run Pipeline | Execute a named multi-step pipeline | Direct or job |
+| 📄 OCR Extract | OCR -> normalize -> structure | Direct or job |
+| 📝 OCR + Summary | OCR -> LLM summarization | Direct or job |
+| 🧠 OCR + Key Fields | OCR -> LLM field extraction | Direct or job |
+| 🗂️ Index Document | OCR -> chunk -> embed -> store | Direct or job |
+| 💬 Ask Indexed Documents | Retrieve -> optional rerank -> answer with citations | Direct or job |
+| 🧪 Run Pipeline | Execute a named multi-step pipeline | Direct or job |
 
 Available named pipelines:
 
@@ -113,7 +145,7 @@ Available named pipelines:
 
 ---
 
-## Example: OCR A Multi-Page PDF
+## 📄 Example: OCR A Multi-Page PDF
 
 ```bash
 curl -X POST http://127.0.0.1:8000/ocr/extract \
@@ -159,7 +191,7 @@ For the complete API surface, see [docs/api-overview.md](docs/api-overview.md).
 
 ---
 
-## Architecture At A Glance
+## 🏗️ Architecture At A Glance
 
 ```text
 React UI (Vite + TypeScript)
@@ -171,7 +203,8 @@ FastAPI application
   |- provider adapters
   |- retrieval services
   |- evaluation suite
-  |- in-memory job queue
+  |- job queue facade (memory or Redis)
+  |- retrieval store facade (memory or Milvus)
           |
           v
 External runtimes / APIs
@@ -179,31 +212,40 @@ External runtimes / APIs
   |- OpenAI
   |- Gemini
   |- Anthropic
+  |- Milvus (optional)
+  `- Redis (optional)
 ```
 
 Key architectural characteristics:
 
 - single-process application with no database or broker required for local development
-- in-memory job queue and retrieval store for low-friction setup
+- in-memory defaults for low-friction local setup, with optional Milvus and Redis backends
 - provider abstraction that separates request routing from vendor-specific SDK logic
 - OCR normalization and structuring kept as explicit stages instead of hidden internals
 - schema-driven UI where the backend serves frontend-safe form metadata
+
+Current infrastructure caveats:
+
+- JWT auth currently verifies bearer tokens but does not implement role-based authorization.
+- A standalone worker process exists for Redis-backed queues, but the API still launches an in-process worker on startup.
+- Readiness checks stay lightweight and do not validate Milvus or Redis connectivity.
+- Swagger UI is available at `/docs`, but the built-in OAuth redirect flow is not fully polished when auth is enabled.
 
 See [docs/architecture.md](docs/architecture.md) for module-level detail and request flow diagrams.
 
 ---
 
-## How To Run
+## 🚀 How To Run
 
 You can run the full stack locally with one Python backend process and one Vite frontend process. Ollama is optional unless you want to use local OCR or local-model flows.
 
-### Prerequisites
+### 🧰 Prerequisites
 
 - Python 3.12+
 - Node.js 18+
 - Ollama, if you want local OCR or local-model workflows
 
-### Backend
+### 🖥️ Backend
 
 ```bash
 python -m venv .venv
@@ -235,7 +277,9 @@ API: `http://127.0.0.1:8000`
 
 Interactive API docs: `http://127.0.0.1:8000/docs`
 
-### Frontend
+When JWT auth is enabled, the docs remain visible, but the built-in Swagger auth redirect flow still needs cleanup.
+
+### 🎨 Frontend
 
 ```bash
 cd ui
@@ -247,7 +291,7 @@ Frontend URL: `http://localhost:5173`
 
 Set `VITE_API_BASE_URL` if the backend is running on a different host or port.
 
-### Optional Ollama Setup
+### 🦙 Optional Ollama Setup
 
 ```bash
 ollama pull deepseek-ocr:3b
@@ -256,7 +300,7 @@ ollama pull glm-ocr
 
 The default runtime URL is `http://localhost:11434` via `DOCUMIND_OLLAMA_BASE_URL`.
 
-### Tests And Build
+### 🧪 Tests And Build
 
 ```bash
 pytest
@@ -267,7 +311,7 @@ The repository includes automated backend coverage across OCR, providers, retrie
 
 ---
 
-## Repository Layout
+## 🗂️ Repository Layout
 
 ```text
 DocuMind/
@@ -279,7 +323,7 @@ DocuMind/
 |  |- providers/     # provider adapters and registry
 |  |- schemas/       # request and response models
 |  |- services/      # indexing, retrieval, reranking, QA, post-processing
-|  `- workers/       # in-memory queue and background worker
+|  `- workers/       # queue facade, background worker, and standalone worker CLI
 |- docs/             # architecture, API, workflows, development notes
 |- tests/            # backend test suite
 `- ui/               # React 19 + TypeScript + Vite frontend
@@ -287,12 +331,12 @@ DocuMind/
 
 ---
 
-## Engineering Decisions
+## ⚖️ Engineering Decisions
 
 | Decision | Why it was chosen | Tradeoff |
 |----------|-------------------|----------|
-| In-memory stores | Keeps local setup simple and fast | Indexed data and jobs do not survive process restart |
-| Single-process worker | One command starts the whole backend | No horizontal scaling in current form |
+| In-memory defaults | Keeps local setup simple and fast | Durability and distributed execution require extra infrastructure |
+| API-managed worker startup | One command starts the whole backend | The API still runs a local worker even when Redis-backed workers are available |
 | Per-request provider selection | Supports local and cloud models behind one API | More request validation and branching at runtime |
 | BYOK instead of stored credentials | Avoids persistent secret management in the app | Callers must provide keys when environment defaults are absent |
 | OCR normalization as an explicit stage | Makes downstream quality improvements visible and testable | Adds an extra transformation layer to the pipeline |
@@ -301,7 +345,7 @@ DocuMind/
 
 ---
 
-## Verification
+## 🧪 Verification
 
 DocuMind is not just a collection of endpoints. The repository includes explicit validation for the main workflow layers:
 
@@ -314,9 +358,13 @@ DocuMind is not just a collection of endpoints. The repository includes explicit
 
 The API also exposes evaluation endpoints for smoke-style benchmarks and concurrent stress runs under `/eval`.
 
+Current test coverage is strongest around the default in-memory execution path, auth helpers,
+and backend-selection facades. Live Redis and Milvus integration coverage is not yet part of
+the automated suite.
+
 ---
 
-## Documentation
+## 📚 Documentation
 
 | Document | Purpose |
 |----------|---------|
@@ -328,7 +376,7 @@ The API also exposes evaluation endpoints for smoke-style benchmarks and concurr
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome, especially in areas that strengthen the core platform and improve the developer or user experience.
 
@@ -352,13 +400,13 @@ If you are extending providers, OCR engines, or pipelines, start with [docs/deve
 
 ---
 
-## License
+## 📄 License
 
 This project is available under the [MIT License](LICENSE).
 
 ---
 
-## Current Scope
+## 🎯 Current Scope
 
 This repository is intentionally optimized for development, experimentation, and architecture clarity.
 
@@ -369,13 +417,15 @@ Current non-goals:
 
 ---
 
-## Future Scope
+## 🔭 Future Scope
 
 The next meaningful extensions are the ones that improve durability, operability, and model breadth without breaking the current local-first development experience.
 
 - additional OCR engines such as Tesseract or Azure Document Intelligence
 - additional provider integrations such as Bedrock or Mistral
 - role-based access control and multi-user support
+- clean API-only versus worker-only deployment modes
+- backend-aware readiness checks and external-service integration coverage
 - CI coverage gates, linting, and type-checking in pipeline form
 - Docker Compose for one-command local bring-up
 - tracing and observability improvements
