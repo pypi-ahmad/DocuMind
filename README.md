@@ -16,7 +16,7 @@ That makes the repository useful for three different audiences:
 
 - engineers building document workflows without heavy infrastructure
 - teams comparing local and cloud providers behind a shared interface
-- interviewers and reviewers evaluating end-to-end backend and platform design in a single repository
+- maintainers and technical reviewers evaluating end-to-end backend and platform design in a single repository
 
 ---
 
@@ -204,18 +204,24 @@ You can run the full stack locally with one Python backend process and one Vite 
 ```bash
 python -m venv .venv
 
-# Windows PowerShell
+python -m pip install -e ".[dev]"
+```
+
+Windows PowerShell:
+
+```powershell
 .venv\Scripts\Activate.ps1
 
-# macOS / Linux
-source .venv/bin/activate
-
-python -m pip install -e ".[dev]"
-
-# Windows PowerShell
 Copy-Item .env.example .env
 
-# macOS / Linux
+uvicorn app.main:app --reload
+```
+
+macOS / Linux:
+
+```bash
+source .venv/bin/activate
+
 cp .env.example .env
 
 uvicorn app.main:app --reload
@@ -253,7 +259,7 @@ pytest
 cd ui && npm run build
 ```
 
-At the time of writing, the repository has 143 automated tests across 13 test modules, and the frontend production build succeeds.
+The repository includes automated backend coverage across OCR, providers, retrieval, jobs, and evaluation, and the frontend supports a production build through Vite.
 
 ---
 
@@ -320,7 +326,7 @@ The API also exposes evaluation endpoints for smoke-style benchmarks and concurr
 
 ## Contributing
 
-Contributions are welcome, especially in areas that strengthen the core platform rather than adding one-off surface features.
+Contributions are welcome, especially in areas that strengthen the core platform and improve the developer or user experience.
 
 Preferred contribution areas:
 
@@ -339,6 +345,12 @@ Contribution guidelines:
 5. Prefer incremental, reviewable changes over broad refactors that mix behavior, style, and restructuring.
 
 If you are extending providers, OCR engines, or pipelines, start with [docs/development.md](docs/development.md).
+
+---
+
+## License
+
+This project is available under the [MIT License](LICENSE).
 
 ---
 
