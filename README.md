@@ -31,8 +31,12 @@ That makes the repository useful for three different audiences:
 | Retrieval | Dense embeddings, BM25 sparse retrieval, and weighted hybrid search |
 | Reranking | LLM-based relevance rescoring for retrieved hits |
 | Document QA | Retrieval-augmented answers with source citations |
-| Async execution | Background job queue with polling and secret scrubbing |
+| Async execution | Background job queue with polling and secret scrubbing (in-memory or Redis) |
 | BYOK | Per-request API keys with no browser persistence and no stored job secrets |
+| Persistent vector store | Optional Milvus backend for durable retrieval index |
+| Persistent job queue | Optional Redis backend for durable, multi-node job execution |
+| Authentication | Optional JWT-based auth with configurable admin credentials |
+| Multi-node workers | Standalone worker CLI for running job execution separately from the API |
 | Evaluation | Benchmark suites and stress tests exposed through the API |
 | UI contract | Schema-driven forms served by the backend |
 
@@ -360,9 +364,6 @@ This repository is intentionally optimized for development, experimentation, and
 
 Current non-goals:
 
-- no persistent vector store or persistent job backend
-- no built-in authentication or authorization layer
-- no multi-node execution model
 - no containerized deployment stack in-repo
 - no benchmark-backed claim of production OCR accuracy
 
@@ -372,11 +373,9 @@ Current non-goals:
 
 The next meaningful extensions are the ones that improve durability, operability, and model breadth without breaking the current local-first development experience.
 
-- persistent vector store support such as Qdrant, Weaviate, or pgvector
-- persistent job execution backend such as Redis or Celery
-- authentication and API key management
 - additional OCR engines such as Tesseract or Azure Document Intelligence
 - additional provider integrations such as Bedrock or Mistral
+- role-based access control and multi-user support
 - CI coverage gates, linting, and type-checking in pipeline form
 - Docker Compose for one-command local bring-up
 - tracing and observability improvements

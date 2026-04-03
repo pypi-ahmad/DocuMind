@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from app.api.routes.eval import router as eval_router
 from app.api.routes.jobs import router as jobs_router
@@ -16,6 +18,7 @@ from app.api.routes.providers import router as providers_router
 from app.api.routes.runtime import router as runtime_router
 from app.api.routes.ui import router as ui_router
 from app.api.router import api_router
+from app.core.auth import PUBLIC_PATHS, get_current_user, router as auth_router
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIDMiddleware, RequestTimingMiddleware
@@ -30,6 +33,7 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 OPENAPI_TAGS = [
+    {"name": "auth", "description": "Authentication and token management endpoints."},
     {"name": "health", "description": "Operational liveness and readiness probes."},
     {"name": "providers", "description": "Provider discovery and model listing endpoints."},
     {"name": "runtime", "description": "Runtime model activation and current state endpoints."},
@@ -77,6 +81,38 @@ app = FastAPI(
 app.add_middleware(RequestTimingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
+# Auth enforcement middleware (only active when auth_enabled=True)
+if settings.auth_enabled:
+    from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+    from starlette.responses import JSONResponse
+
+    class AuthMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+            path = request.url.path.rstrip("/") or "/"
+            if path in PUBLIC_PATHS or path.startswith("/auth/"):
+                return await call_next(request)
+
+            auth_header = request.headers.get("Authorization", "")
+            if not auth_header.startswith("Bearer "):
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Missing authentication token"},
+                )
+
+            token = auth_header[7:]
+            try:
+                from app.core.auth import decode_access_token
+                decode_access_token(token)
+            except Exception:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid or expired token"},
+                )
+
+            return await call_next(request)
+
+    app.add_middleware(AuthMiddleware)
+
 cors_allow_origins = settings.cors_allow_origins
 if isinstance(cors_allow_origins, str):
     cors_allow_origins = [cors_allow_origins]
@@ -94,6 +130,7 @@ if cors_allow_origins:
 register_exception_handlers(app)
 
 # -- Routers --
+app.include_router(auth_router)
 app.include_router(api_router)
 app.include_router(providers_router)
 app.include_router(llm_router)

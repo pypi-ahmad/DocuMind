@@ -96,6 +96,18 @@ Accepts an optional `api_key` in the request body for BYOK cloud providers.
 | GET | `/ui/config` | Frontend capability discovery (providers, engines, routes) |
 | GET | `/ui/forms` | Field-level metadata for each action form |
 
+### Authentication
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/token` | Obtain a JWT access token (username + password) |
+
+Authentication is **disabled by default**. Set `DOCUMIND_AUTH_ENABLED=true` and
+configure `DOCUMIND_AUTH_SECRET_KEY`, `DOCUMIND_AUTH_ADMIN_USERNAME`, and
+`DOCUMIND_AUTH_ADMIN_PASSWORD` to enable it. When enabled, all endpoints except
+`/health/*`, `/auth/token`, `/docs`, `/openapi.json`, and `/redoc` require an
+`Authorization: Bearer <token>` header.
+
 ---
 
 ## Direct Mode vs Job Mode
