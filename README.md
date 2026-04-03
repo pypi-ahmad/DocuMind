@@ -189,7 +189,9 @@ See [docs/architecture.md](docs/architecture.md) for module-level detail and req
 
 ---
 
-## Quick Start
+## How To Run
+
+You can run the full stack locally with one Python backend process and one Vite frontend process. Ollama is optional unless you want to use local OCR or local-model flows.
 
 ### Prerequisites
 
@@ -316,6 +318,30 @@ The API also exposes evaluation endpoints for smoke-style benchmarks and concurr
 
 ---
 
+## Contributing
+
+Contributions are welcome, especially in areas that strengthen the core platform rather than adding one-off surface features.
+
+Preferred contribution areas:
+
+- OCR engine improvements and additional OCR adapters
+- retrieval quality, reranking behavior, and evaluation coverage
+- provider integrations and runtime ergonomics
+- developer experience, testing, and production-readiness improvements
+- frontend clarity and workflow usability improvements
+
+Contribution guidelines:
+
+1. Create a focused branch for a single change or tightly related set of changes.
+2. Keep behavior changes covered by tests whenever practical.
+3. Update docs when you change the public API, workflow behavior, or setup steps.
+4. Run `pytest` for backend changes and `cd ui && npm run build` for frontend changes before opening a PR.
+5. Prefer incremental, reviewable changes over broad refactors that mix behavior, style, and restructuring.
+
+If you are extending providers, OCR engines, or pipelines, start with [docs/development.md](docs/development.md).
+
+---
+
 ## Current Scope
 
 This repository is intentionally optimized for development, experimentation, and architecture clarity.
@@ -330,7 +356,9 @@ Current non-goals:
 
 ---
 
-## Roadmap
+## Future Scope
+
+The next meaningful extensions are the ones that improve durability, operability, and model breadth without breaking the current local-first development experience.
 
 - persistent vector store support such as Qdrant, Weaviate, or pgvector
 - persistent job execution backend such as Redis or Celery
