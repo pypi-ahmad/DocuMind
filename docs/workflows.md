@@ -7,7 +7,7 @@ use `curl` against `http://localhost:8000`.
 
 ## 1. OCR Extract
 
-Extract text from a document image.
+Extract text from a document image or multi-page PDF.
 
 ```bash
 curl -X POST http://localhost:8000/ocr/extract \

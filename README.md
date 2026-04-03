@@ -1,194 +1,191 @@
 # DocuMind
 
-**OCR-first document intelligence platform** — extract, normalize, structure, index, and query document content through pluggable LLM providers with a single self-hosted API.
+OCR-first document intelligence platform for extracting, normalizing, structuring, indexing, and querying document content through a single API.
 
-Built with FastAPI · React · TypeScript · Python 3.12+
+DocuMind combines a FastAPI backend, a React UI, pluggable OCR engines, pluggable LLM providers, hybrid retrieval, and an evaluation harness in one local-first codebase. It can run fully on local models with Ollama or mix local OCR with cloud providers such as OpenAI, Gemini, and Anthropic.
 
----
-
-## Why This Project Exists
-
-Most document processing tools treat OCR as an afterthought — a preprocessing step buried inside a larger pipeline. DocuMind inverts that: OCR extraction is the primary entry point, and everything downstream (normalization, summarization, field extraction, retrieval, QA) is composed on top of clean, structured OCR output.
-
-The result is a system that demonstrates how to build a practical document intelligence API with:
-
-- A **pluggable provider layer** so the same workflow runs against Ollama locally or OpenAI/Gemini/Anthropic in the cloud — swapped per-request, not per-deployment
-- A **BYOK (Bring Your Own Key) model** where API keys are injected per-request and never persisted
-- An **async job queue** decoupling request acceptance from execution
-- **Hybrid retrieval** combining dense vector search with BM25 sparse scoring
-- A **built-in evaluation framework** with benchmarks and stress tests to validate OCR and retrieval quality
+Built with FastAPI, React 19, TypeScript, Python 3.12+, and Ollama-based OCR.
 
 ---
 
-## What the System Does
+## Why DocuMind
 
-```
-Document Image
-      │
-      ▼
-┌─────────────┐     ┌──────────────┐     ┌──────────────────┐
-│  OCR Engine  │────▶│  Normalize   │────▶│  Structure       │
-│  (pluggable) │     │  + Clean     │     │  (sections,      │
-└─────────────┘     └──────────────┘     │   paragraphs,    │
-                                          │   tables)        │
-                                          └────────┬─────────┘
-                                                   │
-                          ┌────────────────────────┼────────────────────┐
-                          ▼                        ▼                    ▼
-                   ┌─────────────┐          ┌────────────┐      ┌────────────┐
-                   │ Postprocess │          │  Chunk +   │      │  Pipeline  │
-                   │ (summary,   │          │  Embed +   │      │  Runner    │
-                   │  key fields,│          │  Index     │      │  (named    │
-                   │  cleanup)   │          └─────┬──────┘      │   steps)   │
-                   └─────────────┘                │             └────────────┘
-                                                  ▼
-                                     ┌────────────────────────┐
-                                     │  Hybrid Search         │
-                                     │  (dense + BM25 sparse) │
-                                     │  + LLM Reranking       │
-                                     └───────────┬────────────┘
-                                                  ▼
-                                     ┌────────────────────────┐
-                                     │  Document QA           │
-                                     │  (RAG with citations)  │
-                                     └────────────────────────┘
-```
+Most document AI systems treat OCR as a hidden preprocessing step. DocuMind makes OCR the primary contract. Extraction, cleanup, structuring, indexing, summarization, and question answering all build on top of a concrete OCR result shape rather than burying the hard part of the problem behind a black box.
 
-Every box in this diagram is implemented. The backend flows shown here are covered by the test suite, and the API route groups are backed by concrete handlers rather than placeholder endpoints.
+That makes the repository useful for three different audiences:
+
+- engineers building document workflows without heavy infrastructure
+- teams comparing local and cloud providers behind a shared interface
+- interviewers and reviewers evaluating end-to-end backend and platform design in a single repository
 
 ---
 
-## Engineering Highlights
+## What Is Implemented
 
-These are aspects of the implementation that reflect deliberate design, not incidental complexity:
-
-| Area | What's implemented |
-|------|--------------------|
-| **Provider abstraction** | `BaseProvider` ABC with four concrete implementations (Ollama, OpenAI, Gemini, Anthropic). All return a normalized `ProviderGenerateResult` — provider, model, text, token usage, metadata. Swappable per-request. |
-| **BYOK key injection** | Per-request `api_key` field overrides `.env` fallback. Keys held in React state only — never written to storage, cookies, or URLs. Cleared from job records after execution. |
-| **OCR → Normalize → Structure pipeline** | Raw OCR output is cleaned (blank lines, whitespace, hyphenation, line breaks) then structured into sections, paragraphs, lines, and table candidates. Downstream services choose the best representation. |
-| **Hybrid retrieval** | Dense search (cosine similarity on embeddings) merged with sparse search (BM25L via `rank-bm25`) using configurable `dense_weight` / `sparse_weight` blending with min-max normalization. |
-| **LLM-based reranking** | Each candidate hit is scored for relevance (0–1) by a provider call. Final score is the average of original retrieval score and rerank score. Top-k filtering applied post-rerank. |
-| **Async job system** | In-memory `asyncio.Queue` with a background worker task. Jobs transition through `pending` → `processing` → `completed` / `failed`. API keys are scrubbed from job records after execution. |
-| **Named pipelines** | Static pipeline definitions with typed step sequences, required/optional input fields, and step-result threading. Each step's output feeds the next step's input. |
-| **Evaluation framework** | Four benchmark suites (OCR, retrieval, reranking, QA) with per-case assertions. Three stress test types (job submission, retrieval search, document QA) reporting throughput, p95 latency, and success rate. |
-| **Schema-driven UI** | Backend serves form descriptors via `GET /ui/forms`. The React frontend renders field inputs dynamically for the supported actions instead of maintaining separate hand-written forms for each one. |
-| **Middleware** | Request ID injection (`X-Request-ID` header) and request timing (`X-Process-Time-MS` header) applied to every response. |
-
----
-
-## Architecture
-
-```
-┌──────────────┐   HTTP   ┌──────────────────────────────────────────────────┐
-│  React UI    │ ──────── │  FastAPI (single process)                        │
-│  (Vite +     │          │                                                  │
-│   TypeScript)│          │  11 route groups ─► service layer ─► providers   │
-└──────────────┘          │       │                    │                      │
-                          │       ▼                    ▼                      │
-                          │  async job queue     OCR engines (Ollama)         │
-                          │  (in-memory)         normalization + structuring  │
-                          │       │                                           │
-                          │       ▼                                           │
-                          │  eval: benchmarks + stress tests                  │
-                          └──────────────────────────────────────────────────┘
-```
-
-**Single process, minimal infrastructure.** No database, message broker, or container setup is required to run locally. The entire system runs with `uvicorn app.main:app`, with Ollama needed only for local OCR and local-model workflows.
-
-**Route groups:** system · providers · LLM · embeddings · OCR · retrieval · pipelines · jobs · runtime · eval · UI
-
-See [docs/architecture.md](docs/architecture.md) for module-level detail and request flow diagrams.
+| Capability | Details |
+|------------|---------|
+| OCR extraction | DeepSeek-OCR and GLM-OCR via Ollama |
+| Multi-page document support | Images plus multi-page PDF splitting via PyMuPDF with per-page OCR results |
+| OCR post-processing | Cleanup, summary, and key-field extraction |
+| Provider abstraction | Ollama, OpenAI, Gemini, and Anthropic behind a shared provider contract |
+| Retrieval | Dense embeddings, BM25 sparse retrieval, and weighted hybrid search |
+| Reranking | LLM-based relevance rescoring for retrieved hits |
+| Document QA | Retrieval-augmented answers with source citations |
+| Async execution | Background job queue with polling and secret scrubbing |
+| BYOK | Per-request API keys with no browser persistence and no stored job secrets |
+| Evaluation | Benchmark suites and stress tests exposed through the API |
+| UI contract | Schema-driven forms served by the backend |
 
 ---
 
 ## Supported Providers
 
-| Provider | Type | Embedding support | BYOK | Notes |
-|----------|------|-------------------|------|-------|
-| **Ollama** | Local | Yes | N/A | Models managed via runtime activate/deactivate |
-| **OpenAI** | Cloud | Yes | Yes | Per-request key overrides `.env` fallback |
-| **Gemini** | Cloud | Yes | Yes | Same normalized response shape as all providers |
-| **Anthropic** | Cloud | No | Yes | Text generation only; no embedding support |
+| Provider | Type | Embeddings | BYOK | Notes |
+|----------|------|------------|------|-------|
+| Ollama | Local | Yes | N/A | Supports local generation and embeddings |
+| OpenAI | Cloud | Yes | Yes | Per-request key can override server environment |
+| Gemini | Cloud | Yes | Yes | Same normalized response shape as other providers |
+| Anthropic | Cloud | No | Yes | Text generation only |
 
-All providers implement `BaseProvider` and return a uniform `ProviderGenerateResult` (provider name, model name, generated text, token usage, metadata).
+All providers implement the same base contract and return a normalized response with provider name, model name, generated text, token usage, and metadata.
 
 ## Supported OCR Engines
 
 | Engine | Model | Backend | Use case |
 |--------|-------|---------|----------|
-| **DeepSeek-OCR** | `deepseek-ocr:3b` | Ollama | Default general-purpose OCR extraction |
-| **GLM-OCR** | `glm-ocr` | Ollama | Structured-oriented extraction for headings, lists, and tables |
+| DeepSeek-OCR | `deepseek-ocr:3b` | Ollama | General-purpose extraction |
+| GLM-OCR | `glm-ocr` | Ollama | More structured extraction for headings, lists, and tables |
 
-An `OCRRouter` selects the engine automatically (`deepseek-ocr` by default, `glm-ocr` when `prefer_structure=True`), or the caller can specify explicitly.
+The OCR layer accepts single images (`.png`, `.jpg`, `.jpeg`, `.webp`) and multi-page PDFs (`.pdf`). PDFs are split into page images with PyMuPDF, each page is processed independently, and the final response includes both merged text and per-page OCR results.
 
 ---
 
-## BYOK (Bring Your Own Key)
+## End-to-End Flow
 
-- A per-request `api_key` in the request body **overrides** the server `.env` fallback for that single call
-- The React UI holds keys **only in component state** — never written to localStorage, sessionStorage, cookies, URLs, or backend storage
-- The backend **scrubs API keys from job records** after execution via `clear_job_secrets()`
-- If no key is provided and no `.env` key is configured, the request fails with a clear error
+```text
+Document (image or PDF)
+          |
+          v
+  OCR engine selection
+          |
+          v
+  Extract text per page or per image
+          |
+          v
+  Normalize OCR output
+          |
+          v
+  Structure into sections / paragraphs / tables
+          |
+          +----------------------+-------------------------+
+          |                      |                         |
+          v                      v                         v
+  OCR post-process        Retrieval indexing         Named pipelines
+  (cleanup / summary      (chunk / embed /           (compose steps
+   / key fields)           store / search)            across services)
+                                                         |
+                                                         v
+                                              Document QA with citations
+```
 
 ---
 
 ## Core Workflows
 
-| Workflow | Steps | Submission |
-|----------|-------|------------|
-| **OCR Extract** | Extract text via OCR engine → normalize → structure | Direct or job queue |
-| **OCR + Summary** | OCR extract → LLM-powered summarization | Direct or job queue |
-| **OCR + Key Fields** | OCR extract → LLM-powered field extraction | Direct or job queue |
-| **Index Document** | OCR extract → chunk → embed → store in retrieval index | Direct or job queue |
-| **Document QA** | Query → hybrid search → optional reranking → RAG answer with citations | Direct or job queue |
-| **Named Pipeline** | Execute a defined multi-step pipeline by name | Direct or job queue |
+| Workflow | What happens | Execution mode |
+|----------|--------------|----------------|
+| OCR Extract | OCR -> normalize -> structure | Direct or job |
+| OCR + Summary | OCR -> LLM summarization | Direct or job |
+| OCR + Key Fields | OCR -> LLM field extraction | Direct or job |
+| Index Document | OCR -> chunk -> embed -> store | Direct or job |
+| Ask Indexed Documents | Retrieve -> optional rerank -> answer with citations | Direct or job |
+| Run Pipeline | Execute a named multi-step pipeline | Direct or job |
 
-**Available pipelines:** `ocr_extract_only`, `ocr_extract_then_summary`, `ocr_extract_then_key_fields`
+Available named pipelines:
 
-The core workflows have both **direct execution** (synchronous response) and **job queue submission** (async with polling) paths at the API level. In the UI, supported actions expose a direct/job toggle.
-
-See [docs/workflows.md](docs/workflows.md) for step-by-step walkthroughs.
-
----
-
-## UI Overview
-
-The frontend is a React 19 + TypeScript + Vite application that acts as a thin client over the backend API.
-
-- **Workflow presets** — six guided presets (OCR Extract, OCR + Summary, OCR + Key Fields, Index Document, Ask Indexed Documents, Run Pipeline) that pre-fill the correct action, endpoint, and form fields
-- **Schema-driven forms** — the backend serves form descriptors (`GET /ui/forms`); the UI renders fields dynamically based on type (string, boolean, integer, number, JSON object)
-- **Provider & model selectors** — separate selectors for LLM and embedding providers/models, populated from `GET /providers/{provider}/models`
-- **Pipeline selector** — dropdown populated from `GET /pipelines` with fallback to manual entry
-- **Indexed document list** — shows currently indexed documents from `GET /retrieval/documents`
-- **Direct / job toggle** — submit supported actions synchronously or via the async job queue with automatic polling
-- **Request preview** — inspect the outgoing payload before submission (API keys redacted)
-- **BYOK input** — per-provider API key field, held only in React state
+- `ocr_extract_only`
+- `ocr_extract_then_summary`
+- `ocr_extract_then_key_fields`
 
 ---
 
-## Evaluation & Stress Testing
+## Example: OCR A Multi-Page PDF
 
-DocuMind includes a built-in evaluation framework accessible via the `/eval` route group.
+```bash
+curl -X POST http://127.0.0.1:8000/ocr/extract \
+  -H "Content-Type: application/json" \
+  -d '{
+    "file_path": "/absolute/path/to/document.pdf",
+    "prefer_structure": true
+  }'
+```
 
-**Benchmark suites** (`POST /eval/run/{benchmark_name}`):
+Response shape excerpt:
 
-| Suite | Cases | What it validates |
-|-------|-------|-------------------|
-| `ocr_smoke` | 4 | OCR extraction shape, normalization correctness |
-| `retrieval_smoke` | 4 | Dense and hybrid retrieval hit presence |
-| `rerank_smoke` | 3 | Reranked result quality — relevant hit near top |
-| `qa_smoke` | 4+ | QA grounding, keyword presence, citation structure |
+```json
+{
+  "engine": "glm-ocr",
+  "layout": {
+    "pages": 3,
+    "structure": true
+  },
+  "text": "...merged OCR text...",
+  "pages": [
+    {
+      "page": 1,
+      "text": "...page 1 text...",
+      "confidence": 0.0,
+      "metadata": {
+        "model": "glm-ocr"
+      }
+    },
+    {
+      "page": 2,
+      "text": "...page 2 text...",
+      "confidence": 0.0,
+      "metadata": {
+        "model": "glm-ocr"
+      }
+    }
+  ]
+}
+```
 
-**Stress tests** (`POST /eval/stress`):
+For the complete API surface, see [docs/api-overview.md](docs/api-overview.md).
 
-| Type | What it measures |
-|------|------------------|
-| `job_submit` | Concurrent job submission throughput |
-| `retrieval_search` | Concurrent dense/hybrid search latency |
-| `document_qa` | Concurrent QA call performance |
+---
 
-Stress test results include: total/successful/failed requests, average latency, p95 latency (nearest-rank), and throughput (requests/sec).
+## Architecture At A Glance
+
+```text
+React UI (Vite + TypeScript)
+          |
+          v
+FastAPI application
+  |- route handlers
+  |- OCR engines
+  |- provider adapters
+  |- retrieval services
+  |- evaluation suite
+  |- in-memory job queue
+          |
+          v
+External runtimes / APIs
+  |- Ollama
+  |- OpenAI
+  |- Gemini
+  |- Anthropic
+```
+
+Key architectural characteristics:
+
+- single-process application with no database or broker required for local development
+- in-memory job queue and retrieval store for low-friction setup
+- provider abstraction that separates request routing from vendor-specific SDK logic
+- OCR normalization and structuring kept as explicit stages instead of hidden internals
+- schema-driven UI where the backend serves frontend-safe form metadata
+
+See [docs/architecture.md](docs/architecture.md) for module-level detail and request flow diagrams.
 
 ---
 
@@ -197,27 +194,34 @@ Stress test results include: total/successful/failed requests, average latency, 
 ### Prerequisites
 
 - Python 3.12+
-- Node.js 18+ (for the frontend)
-- [Ollama](https://ollama.com/) running locally (optional — needed only for local LLM / OCR)
+- Node.js 18+
+- Ollama, if you want local OCR or local-model workflows
 
 ### Backend
 
 ```bash
 python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Linux / macOS
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# macOS / Linux
 source .venv/bin/activate
 
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 
+# Windows PowerShell
+Copy-Item .env.example .env
+
+# macOS / Linux
 cp .env.example .env
-# Edit .env — add API keys for cloud providers if desired
 
 uvicorn app.main:app --reload
 ```
 
-API: `http://127.0.0.1:8000` · Interactive docs: `http://127.0.0.1:8000/docs`
+API: `http://127.0.0.1:8000`
+
+Interactive API docs: `http://127.0.0.1:8000/docs`
 
 ### Frontend
 
@@ -227,162 +231,112 @@ npm install
 npm run dev
 ```
 
-Opens at `http://localhost:5173`. Set `VITE_API_BASE_URL` to override the default backend URL.
+Frontend URL: `http://localhost:5173`
 
-### Ollama (optional)
+Set `VITE_API_BASE_URL` if the backend is running on a different host or port.
+
+### Optional Ollama Setup
 
 ```bash
 ollama pull deepseek-ocr:3b
 ollama pull glm-ocr
 ```
 
-Ensure Ollama is running at `http://localhost:11434` (the default `DOCUMIND_OLLAMA_BASE_URL`).
+The default runtime URL is `http://localhost:11434` via `DOCUMIND_OLLAMA_BASE_URL`.
 
-### Tests
+### Tests And Build
 
 ```bash
 pytest
+cd ui && npm run build
 ```
 
-125+ tests covering OCR, providers, retrieval, reranking, QA, jobs, BYOK, chunking, evaluation, and system health.
+At the time of writing, the repository has 143 automated tests across 13 test modules, and the frontend production build succeeds.
 
 ---
 
-## Repository Structure
+## Repository Layout
 
-```
+```text
 DocuMind/
-├── app/
-│   ├── main.py                 # FastAPI entry point — lifespan, middleware, routers
-│   ├── api/
-│   │   ├── router.py           # Root API router
-│   │   └── routes/             # 11 route modules (ocr, llm, retrieval, jobs, …)
-│   ├── core/
-│   │   ├── settings.py         # pydantic-settings config (DOCUMIND_ prefix)
-│   │   ├── pipelines.py        # Named pipeline definitions
-│   │   ├── model_manager.py    # Runtime model activation / deactivation
-│   │   ├── errors.py           # Global exception handlers
-│   │   ├── middleware.py        # Request ID + timing middleware
-│   │   └── logging.py          # Structured logging setup
-│   ├── providers/
-│   │   ├── base.py             # BaseProvider ABC + ProviderGenerateResult
-│   │   ├── registry.py         # Provider factory registry
-│   │   ├── ollama.py           # Local Ollama provider
-│   │   ├── openai.py           # OpenAI provider
-│   │   ├── gemini.py           # Google Gemini provider
-│   │   └── anthropic.py        # Anthropic provider
-│   ├── ocr/
-│   │   ├── base.py             # BaseOCREngine ABC
-│   │   ├── router.py           # Engine selection logic
-│   │   ├── normalize.py        # OCR text normalization
-│   │   ├── structure.py        # Section/paragraph/table structuring
-│   │   ├── deepseek.py         # DeepSeek-OCR engine
-│   │   └── glm.py              # GLM-OCR engine
-│   ├── services/
-│   │   ├── ocr_postprocess.py  # LLM-powered summarization / key-field extraction
-│   │   ├── indexing.py         # OCR → chunk → embed → store
-│   │   ├── chunking.py         # Paragraph-aware chunking with overlap
-│   │   ├── embedding_service.py# Embedding generation + document indexing
-│   │   ├── retrieval_store.py  # In-memory vector store (cosine similarity)
-│   │   ├── sparse_retrieval.py # BM25L sparse search (rank-bm25)
-│   │   ├── hybrid_retrieval.py # Weighted dense + sparse score merging
-│   │   ├── reranker.py         # LLM-based relevance reranking
-│   │   ├── document_qa.py      # Retrieval-augmented QA with citations
-│   │   └── pipeline_runner.py  # Named pipeline executor
-│   ├── workers/
-│   │   ├── queue.py            # In-memory async job queue
-│   │   └── worker.py           # Background job processor (5 job types)
-│   ├── eval/
-│   │   ├── benchmarks.py       # 4 benchmark suites (OCR, retrieval, rerank, QA)
-│   │   ├── evaluator.py        # Benchmark runner with per-case assertions
-│   │   ├── metrics.py          # Scoring functions
-│   │   └── stress.py           # 3 stress test types with p95/throughput metrics
-│   └── schemas/                # Pydantic request/response models
-├── tests/                      # 12 test modules (125+ tests)
-├── ui/                         # React 19 + TypeScript + Vite
-│   └── src/
-│       ├── App.tsx             # Workflow preset orchestration
-│       ├── api.ts              # Typed API client
-│       ├── types.ts            # Shared TypeScript types
-│       └── components/         # Reusable UI components
-├── docs/                       # Extended documentation
-├── .env.example                # Annotated environment variable template
-├── pyproject.toml              # Python project metadata
-└── README.md
+|- app/
+|  |- api/           # FastAPI route handlers
+|  |- core/          # settings, middleware, errors, pipelines, model manager
+|  |- eval/          # benchmarks, evaluator, metrics, stress tests
+|  |- ocr/           # OCR engines, PDF splitting, normalization, structuring
+|  |- providers/     # provider adapters and registry
+|  |- schemas/       # request and response models
+|  |- services/      # indexing, retrieval, reranking, QA, post-processing
+|  `- workers/       # in-memory queue and background worker
+|- docs/             # architecture, API, workflows, development notes
+|- tests/            # backend test suite
+`- ui/               # React 19 + TypeScript + Vite frontend
 ```
+
+---
+
+## Engineering Decisions
+
+| Decision | Why it was chosen | Tradeoff |
+|----------|-------------------|----------|
+| In-memory stores | Keeps local setup simple and fast | Indexed data and jobs do not survive process restart |
+| Single-process worker | One command starts the whole backend | No horizontal scaling in current form |
+| Per-request provider selection | Supports local and cloud models behind one API | More request validation and branching at runtime |
+| BYOK instead of stored credentials | Avoids persistent secret management in the app | Callers must provide keys when environment defaults are absent |
+| OCR normalization as an explicit stage | Makes downstream quality improvements visible and testable | Adds an extra transformation layer to the pipeline |
+| LLM-based reranking | Works across providers without extra model infrastructure | Higher latency and cost than a dedicated reranker |
+| Schema-driven UI | Keeps the frontend aligned with backend capabilities | Requires backend-maintained form metadata |
+
+---
+
+## Verification
+
+DocuMind is not just a collection of endpoints. The repository includes explicit validation for the main workflow layers:
+
+- OCR and OCR post-processing tests
+- provider and BYOK tests
+- embedding, retrieval, and reranking tests
+- jobs and system health tests
+- evaluation and stress-test coverage
+- dedicated tests for multi-page PDF OCR support
+
+The API also exposes evaluation endpoints for smoke-style benchmarks and concurrent stress runs under `/eval`.
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [docs/architecture.md](docs/architecture.md) | System overview, module map, request flow diagrams |
-| [docs/api-overview.md](docs/api-overview.md) | All endpoint groups, direct vs. job mode, BYOK details |
-| [docs/workflows.md](docs/workflows.md) | Step-by-step workflow walkthroughs with example payloads |
-| [docs/development.md](docs/development.md) | Local setup, extending providers / engines / pipelines |
-| [ui/README.md](ui/README.md) | Frontend architecture and component documentation |
+| Document | Purpose |
+|----------|---------|
+| [docs/architecture.md](docs/architecture.md) | Module map, request flows, and system boundaries |
+| [docs/api-overview.md](docs/api-overview.md) | Endpoint groups, job mode, and BYOK behavior |
+| [docs/workflows.md](docs/workflows.md) | Example payloads and end-to-end workflow walkthroughs |
+| [docs/development.md](docs/development.md) | Local setup and extension points for providers, OCR, and pipelines |
+| [ui/README.md](ui/README.md) | Frontend structure and component-level notes |
 
 ---
 
-## Design Decisions & Tradeoffs
+## Current Scope
 
-| Decision | Rationale |
-|----------|-----------|
-| **In-memory stores** | Eliminates infrastructure dependencies for local development. Tradeoff: data is lost on restart. |
-| **Single-process async worker** | Keeps deployment simple (one `uvicorn` command). Tradeoff: no horizontal scaling. |
-| **Per-request provider selection** | Allows the same API to serve local Ollama and cloud providers without redeployment. |
-| **BYOK over server-managed keys** | Avoids key storage responsibility. The API never persists caller secrets. |
-| **Schema-driven UI forms** | Backend controls field shape for supported actions; the frontend stays generic at the form level instead of maintaining a separate hand-built form per action. |
-| **OCR normalization as a separate stage** | Keeps raw OCR output available while providing a clean version for downstream use. |
-| **Hybrid retrieval with configurable weights** | Dense search captures semantics; BM25 captures exact terms. Weights let the caller tune the blend. |
-| **LLM-based reranking (not cross-encoder model)** | Works with any text generation provider; no additional model infrastructure required. |
+This repository is intentionally optimized for development, experimentation, and architecture clarity.
 
----
+Current non-goals:
 
-## Non-Goals / Out of Scope
-
-These are intentionally excluded from the current implementation:
-
-- **Production deployment** — no Docker, Kubernetes, or CI/CD. This is a development/demonstration system.
-- **Persistent storage** — retrieval index and job queue are in-memory by design.
-- **Authentication / authorization** — the API is open. Deploy behind a gateway for access control.
-- **Multi-node scaling** — single-process architecture; the job worker runs in the same process.
-- **PDF page splitting** — OCR operates on single images; multi-page PDF support is not implemented.
-- **Fine-tuned OCR accuracy claims** — both engines run via Ollama with default prompts; no accuracy benchmarks are published.
+- no persistent vector store or persistent job backend
+- no built-in authentication or authorization layer
+- no multi-node execution model
+- no containerized deployment stack in-repo
+- no benchmark-backed claim of production OCR accuracy
 
 ---
 
-## Future Improvements
+## Roadmap
 
-- Persistent vector store backend (Qdrant, Weaviate, or pgvector)
-- Persistent job queue (Redis or Celery)
-- Authentication and API key management
-- PDF page-level OCR with multi-page support
-- Additional OCR engines (Tesseract, Azure Document Intelligence)
-- Additional LLM providers (AWS Bedrock, Mistral)
-- CI/CD pipeline with linting, type-checking, and coverage gates
-- Docker Compose for one-command local setup
-- OpenTelemetry tracing integration
-
----
-
-## Resume / Interview Talking Points
-
-These are grounded in the actual implementation — not aspirational:
-
-1. **Designed a pluggable provider abstraction** over four LLM backends (Ollama, OpenAI, Gemini, Anthropic) with a uniform response contract (`ProviderGenerateResult`), enabling per-request provider switching without configuration changes.
-
-2. **Implemented hybrid document retrieval** combining dense vector search (cosine similarity on embeddings) with BM25L sparse scoring, merged via configurable weighted blending with min-max normalization.
-
-3. **Built an LLM-based reranking layer** that scores each retrieval hit for relevance (0–1) and produces a final score as a weighted average of retrieval and rerank scores for downstream RAG workflows.
-
-4. **Engineered a BYOK key injection model** where per-request API keys override server-side defaults, are never persisted to disk or browser storage, and are scrubbed from job records after execution.
-
-5. **Implemented an OCR normalization and structuring pipeline** that cleans raw OCR output (whitespace, hyphenation, broken lines) and extracts sections, paragraphs, and table candidates for downstream consumption.
-
-6. **Built a schema-driven frontend** where the backend serves form descriptors and the React UI renders input forms dynamically for supported actions, reducing the need for separate hand-built forms.
-
-7. **Created an async job system** with an in-memory `asyncio.Queue`, background worker, four-state lifecycle (`pending` → `processing` → `completed` / `failed`), and automatic secret scrubbing.
-
-8. **Developed a built-in evaluation framework** with four benchmark suites and three stress test types reporting throughput, p95 latency, and success rate for validating OCR and retrieval quality.
+- persistent vector store support such as Qdrant, Weaviate, or pgvector
+- persistent job execution backend such as Redis or Celery
+- authentication and API key management
+- additional OCR engines such as Tesseract or Azure Document Intelligence
+- additional provider integrations such as Bedrock or Mistral
+- CI coverage gates, linting, and type-checking in pipeline form
+- Docker Compose for one-command local bring-up
+- tracing and observability improvements
