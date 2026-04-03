@@ -61,8 +61,9 @@ providers by name.
 ### `app/ocr/`
 
 OCR engine adapters behind `BaseOCREngine` (ABC). `router.py` selects an engine
-automatically or uses the caller's override. `normalize.py` and `structure.py`
-post-process raw OCR output into a consistent format.
+automatically or uses the caller's override. `pdf.py` splits multi-page PDFs into
+per-page images via PyMuPDF. `normalize.py` and `structure.py` post-process raw
+OCR output into a consistent format.
 
 ### `app/services/`
 
@@ -140,10 +141,12 @@ Client ─► GET /jobs/{job_id} ─► return current JobResponse
 POST /ocr/extract
     │
     ├─ router.py selects engine (or uses caller override)
-    ├─ engine.extract(image_bytes)
+    ├─ engine.extract(file_path)
+    │      ├─ if PDF → pdf.py splits pages, OCR each, merge
+    │      └─ if image → encode + single Ollama call
     ├─ normalize.py → consistent text format
     ├─ structure.py → structured output (optional)
-    └─ return OCR result
+    └─ return OCR result (with per-page data for PDFs)
 
 POST /ocr/postprocess
     │

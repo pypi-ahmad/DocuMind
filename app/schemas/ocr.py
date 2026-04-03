@@ -21,6 +21,13 @@ class OCRNormalizationSummary(BaseModel):
     cleaned_hyphenation: bool
 
 
+class OCRPageResult(BaseModel):
+    page: int
+    text: str
+    confidence: float = 0.0
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class OCRExtractResponse(BaseModel):
     engine: str
     text: str
@@ -31,6 +38,7 @@ class OCRExtractResponse(BaseModel):
     tables: list[dict]
     confidence: float
     metadata: dict
+    pages: list[OCRPageResult] = Field(default_factory=list)
 
 
 class OCRRouteDecisionResponse(BaseModel):
