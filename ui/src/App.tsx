@@ -18,7 +18,7 @@ import { FormattedResult } from './components/FormattedResult'
 import { JobPoller } from './components/JobPoller'
 import { JsonBlock } from './components/JsonBlock'
 import { PipelineSelector } from './components/PipelineSelector'
-import { ProviderModelSelector } from './components/ProviderModelSelector'
+import { PROVIDER_DISPLAY_NAMES, ProviderModelSelector } from './components/ProviderModelSelector'
 import { WorkflowPresetCards } from './components/WorkflowPresetCards'
 import { WorkflowStatus } from './components/WorkflowStatus'
 import type {
@@ -541,7 +541,7 @@ export default function App() {
       setIntermediateResult(ocrResponse)
       currentStep = 2
       setWorkflowSteps([
-        { label: 'Step 1: OCR extract', status: 'completed' },
+        { label: 'Step 1: Extract text', status: 'completed' },
         { label: `Step 2: ${workflowLabel}`, status: 'running' },
       ])
 
@@ -560,7 +560,7 @@ export default function App() {
         setSubmittedJob(jobResponse)
         setJobSnapshot(null)
         setWorkflowSteps([
-          { label: 'Step 1: OCR extract', status: 'completed' },
+          { label: 'Step 1: Extract text', status: 'completed' },
           {
             label: `Step 2: ${workflowLabel}`,
             status: 'running',
@@ -573,19 +573,19 @@ export default function App() {
       const nextResponse = await submitAction('ocr_postprocess', stepTwoPayload)
       setResponseData(nextResponse)
       setWorkflowSteps([
-        { label: 'Step 1: OCR extract', status: 'completed' },
+        { label: 'Step 1: Extract text', status: 'completed' },
         { label: `Step 2: ${workflowLabel}`, status: 'completed' },
       ])
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Workflow failed'
       if (currentStep === 1) {
         setWorkflowSteps([
-          { label: 'Step 1: OCR extract', status: 'failed', detail: message },
+          { label: 'Step 1: Extract text', status: 'failed', detail: message },
           { label: `Step 2: ${workflowLabel}`, status: 'pending' },
         ])
       } else {
         setWorkflowSteps([
-          { label: 'Step 1: OCR extract', status: 'completed' },
+          { label: 'Step 1: Extract text', status: 'completed' },
           { label: `Step 2: ${workflowLabel}`, status: 'failed', detail: message },
         ])
       }
@@ -899,7 +899,7 @@ export default function App() {
             <ul className="provider-list">
               {config.providers.map((provider) => (
                 <li key={provider.provider} className="provider-item">
-                  <strong>{provider.provider}</strong>
+                  <strong>{PROVIDER_DISPLAY_NAMES[provider.provider] ?? provider.provider}</strong>
                   <div className="provider-flags">
                     {provider.requires_api_key ? <span className="provider-badge badge-key">Requires API key</span> : <span className="provider-badge badge-ok">No key needed</span>}
                     {provider.has_env_key ? <span className="provider-badge badge-ok">Server key configured</span> : provider.requires_api_key ? <span className="provider-badge badge-warn">No server key</span> : null}
@@ -1000,6 +1000,7 @@ export default function App() {
             <div className="form-section-stack-item">
               <section className="card">
                 <FileUpload
+                  key={selectedPreset}
                   disabled={isActionBusy}
                   onFilePathResolved={(filePath) => handleFieldChange('file_path', filePath)}
                 />

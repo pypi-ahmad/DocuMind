@@ -57,17 +57,29 @@ async def upload_document(file: UploadFile) -> dict[str, str]:
         )
 
     max_bytes = settings.max_upload_size_mb * 1024 * 1024
-    content = await file.read()
-    if len(content) > max_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File exceeds the {settings.max_upload_size_mb} MB size limit.",
-        )
+    chunk_size = 256 * 1024  # 256 KB
 
     safe_name = f"{uuid.uuid4().hex}{extension}"
     dest = _upload_dir() / safe_name
-    dest.write_bytes(content)
-    logger.info("Uploaded %s (%d bytes) → %s", file.filename, len(content), dest)
+    total = 0
+    try:
+        with dest.open("wb") as f:
+            while chunk := await file.read(chunk_size):
+                total += len(chunk)
+                if total > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"File exceeds the {settings.max_upload_size_mb} MB size limit.",
+                    )
+                f.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    except Exception:
+        dest.unlink(missing_ok=True)
+        raise
+
+    logger.info("Uploaded %s (%d bytes) → %s", file.filename, total, dest)
 
     return {"file_path": str(dest)}
 

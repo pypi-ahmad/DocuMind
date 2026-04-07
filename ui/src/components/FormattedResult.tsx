@@ -11,7 +11,16 @@ function isTextResponse(value: unknown): value is { text: string } {
   return Boolean(value && typeof value === 'object' && 'text' in value && typeof (value as Record<string, unknown>).text === 'string')
 }
 
-function isAnswerResponse(value: unknown): value is { answer: string; sources?: unknown[] } {
+function isOutputTextResponse(value: unknown): value is { output_text: string; task?: string } {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      'output_text' in value &&
+      typeof (value as Record<string, unknown>).output_text === 'string',
+  )
+}
+
+function isAnswerResponse(value: unknown): value is { answer: string; citations?: unknown[]; sources?: unknown[] } {
   return Boolean(value && typeof value === 'object' && 'answer' in value && typeof (value as Record<string, unknown>).answer === 'string')
 }
 
@@ -94,11 +103,14 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
           </div>
         </div>
         <div className="formatted-prose">{value.answer}</div>
-        {value.sources && Array.isArray(value.sources) && value.sources.length > 0 && (
+        {(() => {
+          const items = value.citations ?? value.sources
+          if (!Array.isArray(items) || items.length === 0) return null
+          return (
           <div className="sources-section">
-            <h3>Sources ({value.sources.length})</h3>
+            <h3>Sources ({items.length})</h3>
             <ul className="source-list">
-              {value.sources.map((source, i) => {
+              {items.map((source, i) => {
                 const s = source as Record<string, unknown>
                 const docId = s.doc_id ?? s.chunk_id ?? `#${i + 1}`
                 const text = typeof s.text === 'string' ? s.text : null
@@ -115,7 +127,29 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
               })}
             </ul>
           </div>
-        )}
+          )
+        })()}
+        <JsonBlock title="Show raw JSON" value={value} collapsible />
+      </section>
+    )
+  }
+
+  // OCR postprocess response (summary, key fields, cleanup)
+  if (isOutputTextResponse(value)) {
+    return (
+      <section className="card">
+        <div className="json-block-header">
+          <h2>{title}</h2>
+          <div className="json-block-actions">
+            <button type="button" className="small-action-button" onClick={() => copyText(value.output_text, setCopied)}>
+              {copied ? 'Copied!' : 'Copy text'}
+            </button>
+            <button type="button" className="small-action-button" onClick={() => downloadJson(value)}>
+              Download JSON
+            </button>
+          </div>
+        </div>
+        <div className="formatted-prose">{value.output_text}</div>
         <JsonBlock title="Show raw JSON" value={value} collapsible />
       </section>
     )
