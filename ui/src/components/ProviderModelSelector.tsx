@@ -18,7 +18,7 @@ interface ProviderModelSelectorProps {
 
 const BYOK_PROVIDERS = new Set(['openai', 'gemini', 'anthropic'])
 
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   ollama: 'Ollama',
   openai: 'OpenAI',
   gemini: 'Google Gemini',

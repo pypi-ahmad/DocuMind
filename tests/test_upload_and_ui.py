@@ -140,6 +140,44 @@ class TestUploadEndpoint:
         assert "/" not in basename
         assert len(basename) > 20  # uuid4 hex is 32 chars + extension
 
+    def test_upload_zero_byte_file(self, upload_client: TestClient) -> None:
+        """Zero-byte files should be accepted (content is valid, just empty)."""
+        response = upload_client.post(
+            "/ocr/upload",
+            files={"file": ("empty.png", io.BytesIO(b""), "image/png")},
+        )
+        assert response.status_code == 200
+        path = Path(response.json()["file_path"])
+        assert path.exists()
+        assert path.stat().st_size == 0
+
+    def test_upload_whitespace_only_filename(self, upload_client: TestClient) -> None:
+        """A filename consisting only of whitespace has no valid extension."""
+        response = upload_client.post(
+            "/ocr/upload",
+            files={"file": ("   ", io.BytesIO(b"data"), "image/png")},
+        )
+        assert response.status_code == 400
+        assert "not allowed" in response.json()["detail"]
+
+    def test_oversized_upload_leaves_no_partial_file(self, upload_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+        """When an upload is rejected for size, no partial file should remain on disk."""
+        import app.api.routes.upload as upload_mod
+
+        monkeypatch.setattr(upload_mod.settings, "max_upload_size_mb", 0)
+        content = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+        upload_dir = _upload_dir()
+        before = set(upload_dir.iterdir())
+
+        upload_client.post(
+            "/ocr/upload",
+            files={"file": ("big.png", io.BytesIO(content), "image/png")},
+        )
+
+        after = set(upload_dir.iterdir())
+        new_files = after - before
+        assert len(new_files) == 0, f"Partial file left on disk: {new_files}"
+
 
 # ---------------------------------------------------------------------------
 # Upload cleanup tests
