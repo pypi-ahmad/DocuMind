@@ -35,7 +35,7 @@ class LivenessResponse(BaseModel):
 
 class ReadinessResponse(BaseModel):
     status: str
-    checks: dict[str, bool]
+    checks: dict[str, str]
 
 
 class UIConfigBYOKResponse(BaseModel):

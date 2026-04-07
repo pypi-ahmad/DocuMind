@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     job_queue_backend: str = "memory"  # "memory" or "redis"
     redis_url: str = "redis://localhost:6379/0"
 
+    # -- Worker --
+    worker_enabled: bool = True  # set False to run API-only (requires Redis backend)
+
     # -- Auth --
     auth_enabled: bool = False
     auth_secret_key: str = "change-me-in-production"

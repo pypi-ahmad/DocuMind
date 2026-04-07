@@ -109,6 +109,9 @@ class TestPublicPaths:
     def test_docs_is_public(self) -> None:
         assert "/docs" in PUBLIC_PATHS
 
+    def test_oauth2_redirect_is_public(self) -> None:
+        assert "/docs/oauth2-redirect" in PUBLIC_PATHS
+
 
 # ---------------------------------------------------------------------------
 # Queue facade dispatch
@@ -232,3 +235,76 @@ class TestNewSettings:
         assert settings.auth_secret_key == "change-me-in-production"
         assert settings.auth_algorithm == "HS256"
         assert settings.auth_access_token_expire_minutes == 30
+
+    def test_worker_enabled_by_default(self) -> None:
+        assert settings.worker_enabled is True
+
+
+# ---------------------------------------------------------------------------
+# Readiness probe — checks dict uses string values
+# ---------------------------------------------------------------------------
+
+
+class TestReadinessResponse:
+    def test_readiness_check_values_are_strings(self) -> None:
+        from app.schemas.common import ReadinessResponse
+        r = ReadinessResponse(
+            status="ok",
+            checks={"queue_initialized": "ok", "model_manager_accessible": "ok"},
+        )
+        assert r.status == "ok"
+        assert r.checks["queue_initialized"] == "ok"
+
+    def test_readiness_degraded_when_check_fails(self) -> None:
+        from app.schemas.common import ReadinessResponse
+        r = ReadinessResponse(
+            status="degraded",
+            checks={"queue_initialized": "ok", "redis": "error: Connection refused"},
+        )
+        assert r.status == "degraded"
+        assert "error" in r.checks["redis"]
+
+
+# ---------------------------------------------------------------------------
+# API-only mode (worker_enabled=False)
+# ---------------------------------------------------------------------------
+
+
+class TestApiOnlyMode:
+    def test_worker_disabled_setting(self) -> None:
+        with patch.object(settings, "worker_enabled", False):
+            assert settings.worker_enabled is False
+
+    def test_app_starts_without_worker(self) -> None:
+        """When worker_enabled=False the app should still respond to requests."""
+        with patch.object(settings, "worker_enabled", False):
+            from fastapi.testclient import TestClient
+            import app.main as m
+            with TestClient(m.app) as client:
+                r = client.get("/health/live")
+                assert r.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Health ready — memory backends return ok strings
+# ---------------------------------------------------------------------------
+
+
+class TestHealthReadyMemoryBackend:
+    def test_ready_memory_backends_ok(self) -> None:
+        with (
+            patch.object(settings, "job_queue_backend", "memory"),
+            patch.object(settings, "vector_store_backend", "memory"),
+        ):
+            from fastapi.testclient import TestClient
+            import app.main as m
+            with TestClient(m.app) as client:
+                r = client.get("/health/ready")
+                assert r.status_code == 200
+                body = r.json()
+                assert body["status"] == "ok"
+                assert body["checks"]["queue_initialized"] == "ok"
+                assert body["checks"]["model_manager_accessible"] == "ok"
+                # memory mode — no redis/milvus keys expected
+                assert "redis" not in body["checks"]
+                assert "milvus" not in body["checks"]
