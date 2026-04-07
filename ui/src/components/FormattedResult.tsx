@@ -96,13 +96,23 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
         <div className="formatted-prose">{value.answer}</div>
         {value.sources && Array.isArray(value.sources) && value.sources.length > 0 && (
           <div className="sources-section">
-            <h3>Sources</h3>
+            <h3>Sources ({value.sources.length})</h3>
             <ul className="source-list">
-              {value.sources.map((source, i) => (
-                <li key={i} className="source-item">
-                  <pre className="metadata-preview">{JSON.stringify(source, null, 2)}</pre>
-                </li>
-              ))}
+              {value.sources.map((source, i) => {
+                const s = source as Record<string, unknown>
+                const docId = s.doc_id ?? s.chunk_id ?? `#${i + 1}`
+                const text = typeof s.text === 'string' ? s.text : null
+                const score = typeof s.score === 'number' ? s.score : null
+                return (
+                  <li key={i} className="source-item">
+                    <div className="source-header">
+                      <span className="source-id">{String(docId)}</span>
+                      {score !== null && <span className="source-score">{(score * 100).toFixed(0)}%</span>}
+                    </div>
+                    {text && <p className="source-text">{text.length > 300 ? text.slice(0, 300) + '…' : text}</p>}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         )}

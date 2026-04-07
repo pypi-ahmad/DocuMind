@@ -631,6 +631,36 @@ button:disabled {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   overflow: hidden;
+  padding: 10px 14px;
+}
+
+.source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.source-id {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #334155;
+  font-family: var(--font-mono, monospace);
+}
+
+.source-score {
+  font-size: 0.8rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+
+.source-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.5;
 }
 
 @media (max-width: 720px) {
