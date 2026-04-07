@@ -48,7 +48,7 @@ function renderInput(
           className="toggle-checkbox"
           checked={checked}
           disabled={disabled}
-          onChange={(event) => onChange(field.name, event.target.checked ? 'true' : '')}
+          onChange={(event) => onChange(field.name, event.target.checked ? 'true' : 'false')}
         />
         <span className="toggle-label">{checked ? 'On' : 'Off'}</span>
       </label>
