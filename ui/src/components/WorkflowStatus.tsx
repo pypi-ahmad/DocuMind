@@ -1,5 +1,12 @@
 import type { WorkflowStepStatus } from '../types'
 
+const STEP_STATUS_LABELS: Record<string, string> = {
+  pending: 'Waiting',
+  running: 'In progress…',
+  completed: 'Done',
+  failed: 'Failed',
+}
+
 interface WorkflowStatusProps {
   title: string
   steps: WorkflowStepStatus[]
@@ -19,7 +26,7 @@ export function WorkflowStatus({ title, steps }: WorkflowStatusProps) {
             <div className="workflow-step-header">
               <strong>{step.label}</strong>
               <span className={`status-badge ${step.status === 'completed' ? 'success' : step.status === 'failed' ? 'error' : 'info'}`}>
-                {step.status}
+                {STEP_STATUS_LABELS[step.status] ?? step.status}
               </span>
             </div>
             {step.detail ? <p className="field-help">{step.detail}</p> : null}

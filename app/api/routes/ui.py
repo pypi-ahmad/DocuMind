@@ -135,6 +135,8 @@ def get_ui_config() -> UIConfigResponse:
     return UIConfigResponse(
         app_name=settings.app_name,
         version=settings.version,
+        vector_store_backend=settings.vector_store_backend,
+        auth_enabled=settings.auth_enabled,
         providers=providers,
         ocr=UIOCRCapability(
             supported_ocr_engines=sorted(VALID_ENGINES),

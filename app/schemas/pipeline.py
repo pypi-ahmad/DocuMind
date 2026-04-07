@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 class PipelineSummary(BaseModel):
     pipeline_name: str
     description: str
+    required_input_fields: list[str] = []
+    optional_input_fields: list[str] = []
 
 
 class PipelineStepResult(BaseModel):

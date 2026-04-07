@@ -116,6 +116,17 @@ def clear_store() -> None:
     _ensure_collection()
 
 
+def delete_document(doc_id: str) -> bool:
+    client = _get_client()
+    name = settings.milvus_collection_name
+    expr = f'doc_id == "{doc_id}"'
+    result = client.query(collection_name=name, filter=expr, output_fields=["chunk_id"], limit=1)
+    if not result:
+        return False
+    client.delete(collection_name=name, filter=expr)
+    return True
+
+
 def list_documents() -> list[dict[str, Any]]:
     import json
     client = _get_client()

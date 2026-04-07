@@ -8,6 +8,48 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
+_FIELD_LABELS: dict[str, str] = {
+    "model_name": "Model",
+    "provider": "Provider",
+    "file_path": "Document file",
+    "doc_id": "Document ID",
+    "query": "Question",
+    "ocr_result": "OCR result",
+    "engine": "OCR engine",
+    "ocr_engine": "OCR engine",
+    "api_key": "API key",
+    "embedding_provider": "Search provider",
+    "embedding_model_name": "Search model",
+    "pipeline_name": "Pipeline",
+    "input": "Input",
+    "retrieval_mode": "Retrieval mode",
+    "top_k": "Number of results",
+    "rerank_top_k": "Re-rank results",
+    "temperature": "Temperature",
+    "max_output_tokens": "Max output length",
+    "prefer_structure": "Structured output",
+    "metadata": "Metadata",
+}
+
+
+def _friendly_loc(loc: list) -> str:
+    """Convert a Pydantic error location tuple to a human-readable field label."""
+    parts = [p for p in loc if p not in ("body", "query", "path") and not isinstance(p, int)]
+    if not parts:
+        return "Input"
+    last = str(parts[-1])
+    return _FIELD_LABELS.get(last, last.replace("_", " ").capitalize())
+
+
+def _friendly_msg(msg: str) -> str:
+    """Simplify Pydantic message text."""
+    lower = msg.lower()
+    if "field required" in lower:
+        return "is required"
+    if "value error" in lower:
+        return msg.split(",", 1)[-1].strip().capitalize() if "," in msg else msg
+    return msg
+
 
 def _get_request_id(request: Request) -> str | None:
     return getattr(request.state, "request_id", None)
@@ -30,10 +72,11 @@ async def _validation_exception_handler(
 ) -> JSONResponse:
     request_id = _get_request_id(request)
     errors = exc.errors()
-    summary = "; ".join(
-        f"{'.'.join(str(loc) for loc in e.get('loc', []))}: {e.get('msg', '')}"
+    messages = [
+        f"{_friendly_loc(list(e.get('loc', [])))}: {_friendly_msg(e.get('msg', ''))}"
         for e in errors
-    )
+    ]
+    summary = "; ".join(messages)
     return JSONResponse(
         status_code=422,
         content={

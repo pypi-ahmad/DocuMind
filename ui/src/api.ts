@@ -29,11 +29,25 @@ export const ACTION_JOB_TYPES: Partial<Record<ActionKey, string>> = {
   pipeline_run: 'pipeline.run',
 }
 
+const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
+  [/\bbody\.([\w.]+):\s*/gi, ''],
+  [/field required/gi, 'is required'],
+  [/(\w+) requires api_key/gi, '$1 requires an API key'],
+]
+
+function translateErrorDetail(detail: string): string {
+  let result = detail
+  for (const [pattern, replacement] of ERROR_TRANSLATIONS) {
+    result = result.replace(pattern, replacement)
+  }
+  return result.trim()
+}
+
 function getErrorMessage(data: unknown, status: number): string {
   if (data && typeof data === 'object' && 'detail' in data) {
     const detail = (data as { detail: unknown }).detail
     if (typeof detail === 'string') {
-      return detail
+      return translateErrorDetail(detail)
     }
   }
 
@@ -69,6 +83,15 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function loadUiConfig(): Promise<UIConfigResponse> {
   return requestJson<UIConfigResponse>('/ui/config')
+}
+
+export async function fetchHealth(): Promise<boolean> {
+  try {
+    await requestJson<{ status: string }>('/health/live')
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function loadUiForms(): Promise<UIFormsResponse> {
@@ -107,6 +130,14 @@ export async function fetchPipelines(): Promise<PipelineSummary[]> {
 
 export async function fetchIndexedDocuments(): Promise<DocumentSummary[]> {
   return requestJson<DocumentSummary[]>('/retrieval/documents')
+}
+
+export async function clearIndexedDocuments(): Promise<void> {
+  await requestJson<void>('/retrieval/documents', { method: 'DELETE' })
+}
+
+export async function deleteIndexedDocument(docId: string): Promise<void> {
+  await requestJson<void>(`/retrieval/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' })
 }
 
 export async function uploadDocument(file: File): Promise<{ file_path: string }> {

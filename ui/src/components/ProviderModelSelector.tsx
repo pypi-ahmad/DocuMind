@@ -18,6 +18,18 @@ interface ProviderModelSelectorProps {
 
 const BYOK_PROVIDERS = new Set(['openai', 'gemini', 'anthropic'])
 
+const PROVIDER_LOAD_HELP: Record<string, string> = {
+  ollama: 'Make sure Ollama is running locally and the model is installed. Run `ollama list` to see what is available.',
+  openai: 'Enter the model name from your OpenAI account.',
+  gemini: 'Enter the model name from your Google AI account.',
+  anthropic: 'Enter the model name from your Anthropic account.',
+}
+
+const PROVIDER_MODEL_PLACEHOLDERS: Record<string, string> = {
+  ollama: 'e.g. llama3',
+  openai: 'e.g. gpt-4o-mini',
+}
+
 export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   ollama: 'Ollama',
   openai: 'OpenAI',
@@ -131,15 +143,27 @@ export function ProviderModelSelector({
           <p className="message error">{modelError}</p>
         ) : manualInput ? (
           <>
-            <span className="field-help">Could not load models: {modelError}. Type a model name manually.</span>
+            <span className="field-help">
+              {showApiKeyInput && !providerMeta?.has_env_key && !apiKey.trim()
+                ? `Enter your API key above — it may be needed to load available models for ${PROVIDER_DISPLAY_NAMES[selectedProvider] ?? selectedProvider}.`
+                : (PROVIDER_LOAD_HELP[selectedProvider] ?? `Could not load models for ${PROVIDER_DISPLAY_NAMES[selectedProvider] ?? selectedProvider}. You can type a model name directly.`)}
+            </span>
             <input
               id="pms-model"
               type="text"
               value={selectedModel}
-              placeholder="e.g. llama3, gpt-4o"
+              placeholder={PROVIDER_MODEL_PLACEHOLDERS[selectedProvider] ?? 'Enter model name'}
               disabled={disabled}
               onChange={(e) => onModelChange(e.target.value)}
             />
+            {modelError ? (
+              <details className="technical-details">
+                <summary className="technical-details-toggle">Why did this fail?</summary>
+                <div className="technical-details-content">
+                  <p className="field-help">{modelError}</p>
+                </div>
+              </details>
+            ) : null}
           </>
         ) : (
           <select

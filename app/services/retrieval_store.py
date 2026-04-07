@@ -62,6 +62,14 @@ def _memory_clear_store() -> None:
     _records.clear()
 
 
+def _memory_delete_document(doc_id: str) -> bool:
+    before = len(_records)
+    to_keep = [r for r in _records if r["doc_id"] != doc_id]
+    _records.clear()
+    _records.extend(to_keep)
+    return len(to_keep) < before
+
+
 def _memory_list_documents() -> list[dict[str, Any]]:
     doc_map: dict[str, dict[str, Any]] = {}
     for record in _records:
@@ -117,6 +125,13 @@ def clear_store() -> None:
         _milvus_clear()
         return
     _memory_clear_store()
+
+
+def delete_document(doc_id: str) -> bool:
+    if _use_milvus():
+        from app.services.milvus_store import delete_document as _milvus_delete
+        return _milvus_delete(doc_id)
+    return _memory_delete_document(doc_id)
 
 
 def list_documents() -> list[dict[str, Any]]:
