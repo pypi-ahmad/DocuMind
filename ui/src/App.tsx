@@ -37,12 +37,12 @@ import type {
 } from './types'
 
 const ACTION_LABELS: Record<ActionKey, string> = {
-  ocr_extract: 'OCR Extract',
-  ocr_postprocess: 'OCR Post-process',
-  llm_generate: 'LLM Generate',
-  retrieval_index_ocr: 'Retrieval Index OCR',
-  retrieval_qa: 'Retrieval QA',
-  pipeline_run: 'Pipeline Run',
+  ocr_extract: 'Extract Text (OCR)',
+  ocr_postprocess: 'Post-process Document',
+  llm_generate: 'Generate Text',
+  retrieval_index_ocr: 'Index Document',
+  retrieval_qa: 'Question & Answer',
+  pipeline_run: 'Run Pipeline',
 }
 
 const PROVIDER_ACTIONS = new Set<ActionKey>(['ocr_postprocess', 'llm_generate', 'retrieval_qa'])
@@ -258,6 +258,13 @@ function humanFieldName(raw: string): string {
     top_k: 'Number of results',
     temperature: 'Creativity',
     max_output_tokens: 'Max response length',
+    prefer_structure: 'Preserve formatting',
+    use_rerank: 'Re-rank results',
+    rerank_top_k: 'Re-rank to top N',
+    retrieval_mode: 'Search method',
+    ocr_engine: 'OCR engine',
+    metadata: 'Metadata',
+    input: 'Pipeline input',
   }
   return map[raw] ?? raw.replace(/_/g, ' ')
 }
@@ -480,7 +487,7 @@ export default function App() {
     }
 
     if (!selectedModel) {
-      throw new Error('model_name is required')
+      throw new Error('Model is required')
     }
 
     const baseStepTwoPayload: Record<string, unknown> = {
@@ -494,7 +501,7 @@ export default function App() {
     }
 
     setWorkflowSteps([
-      { label: 'Step 1: OCR extract', status: 'running' },
+      { label: 'Step 1: Extract text', status: 'running' },
       { label: `Step 2: ${workflowLabel}`, status: 'pending' },
     ])
 
@@ -688,7 +695,7 @@ export default function App() {
           return
         }
 
-        setLoadError(error instanceof Error ? error.message : 'Could not reach the DocuMind server')
+        setLoadError(error instanceof Error ? error.message : 'Could not connect to the DocuMind server')
       } finally {
         if (isMounted) {
           setIsLoading(false)
