@@ -552,11 +552,23 @@ Each chunk is stored with an auto-generated `chunk_id` in the format `{doc_id}:c
 curl http://localhost:8000/retrieval/documents
 ```
 
+Returns an array of objects, each with `doc_id`, `chunk_count`, and `metadata`.
+
+### Remove a single indexed document
+
+```bash
+curl -X DELETE http://localhost:8000/retrieval/documents/{doc_id}
+```
+
+Returns HTTP 204 on success. Returns HTTP 404 if no document matching `doc_id` exists in the index. All chunks belonging to that document are removed.
+
 ### Clear all indexed documents
 
 ```bash
 curl -X DELETE http://localhost:8000/retrieval/documents
 ```
+
+Returns HTTP 204. Removes every chunk from the active vector store.
 
 ---
 
@@ -909,28 +921,47 @@ curl http://localhost:8000/providers \
 
 The React frontend at `http://localhost:5173` renders all forms dynamically from backend metadata — no hardcoded field configuration.
 
+### Status indicators
+
+The header shows a real-time server health strip:
+
+- **Connected** (green) — backend responded successfully to the most recent health check (checked every 30 seconds).
+- **Server unreachable** (red) — the last health check failed. Submissions will fail until connectivity is restored.
+
+When the backend is configured with the in-memory vector store, a persistent banner reads:
+
+> **Temporary storage:** Indexed documents are stored in memory and will be lost when the server restarts.
+
+When authentication is disabled, a persistent banner reads:
+
+> **Open access:** Authentication is disabled. Anyone who can reach this address can use the app.
+
 ### Workflow Presets
 
 The main interface shows preset cards for common workflows:
 
 | Preset | What it does |
 |--------|-------------|
-| **Extract Text** | Uploads a file → runs OCR |
+| **Extract Text** | Uploads a file → runs OCR → shows extracted text |
 | **Extract & Summarize** | Uploads a file → runs OCR → generates a summary |
 | **Extract Key Fields** | Uploads a file → runs OCR → extracts structured fields |
-| **Index Document** | Uploads a file → runs OCR → chunks → embeds → stores |
+| **Index Document** | Uploads a file → runs OCR → chunks → embeds → stores in index |
 | **Ask Your Documents** | Takes a text question → retrieves from index → reranks → generates an answer with citations |
 | **Run Pipeline** | Selects and executes a named pipeline |
 
 ### UI features
 
 - **Drag-and-drop file upload** in preset mode (accepted: `.png`, `.jpg`, `.jpeg`, `.webp`, `.pdf`)
-- **Provider/model selection** — dropdowns populated dynamically from the backend
-- **BYOK API key field** — appears when a cloud provider is selected
-- **Background job toggle** — submit any workflow as a background job and poll for results
-- **Smart result rendering** — OCR text as prose, QA answers with source citations, key fields as tables
-- **Raw JSON toggle** — view the full API response for any result
-- **Advanced API mode** — exposes all endpoint parameters for power users
+- **Provider/model selection** — dropdowns populated dynamically from the backend; falls back to a manual text input with contextual guidance when the model list cannot be loaded
+- **BYOK API key field** — appears when a cloud provider is selected; includes a note indicating whether the server already has a configured key
+- **Background job toggle** — submit any pipeline or retrieval workflow as a background job and poll for results inline
+- **Smart result rendering** — OCR text as readable prose; QA answers with expandable source citations; key fields as a table; index results as a stat summary (document ID, sections indexed, OCR engine used)
+- **Intermediate result disclosure** — in multi-step presets (e.g. Extract & Summarize), the intermediate OCR text is collapsed by default and can be expanded
+- **Post-operation guidance** — after a successful Extract Text run, the UI suggests next steps (summarize, extract fields, or index); after a successful Index Document run, the UI points to Ask Your Documents
+- **Indexed document management** — in the Ask Your Documents preset, the sidebar lists all indexed documents with a per-document **Remove** button (requires inline confirmation) and a **Clear all** action; each entry shows the chunk count and a metadata toggle
+- **Raw JSON toggle** — every result card includes a collapsible "Show raw JSON" section for the full API response
+- **Technical details disclosure** — background job status cards include a collapsible section showing the raw job ID and status code
+- **Advanced API mode** — click "Switch to advanced mode" to access all endpoint parameters, request preview, and job submission JSON
 
 ---
 

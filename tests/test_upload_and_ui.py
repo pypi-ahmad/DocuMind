@@ -205,9 +205,7 @@ class TestUploadCleanup:
         new_file = tmp_path / "new.png"
         new_file.write_bytes(b"new")
 
-        # Run the purge synchronously
-        import asyncio
-        # manually inline one iteration of the purge logic
+        # Run the purge synchronously — manually inline one iteration of the purge logic
         ttl_seconds = upload_mod.settings.upload_ttl_minutes * 60
         cutoff = time.time() - ttl_seconds
         for p in tmp_path.iterdir():
