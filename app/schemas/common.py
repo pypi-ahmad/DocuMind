@@ -36,37 +36,3 @@ class LivenessResponse(BaseModel):
 class ReadinessResponse(BaseModel):
     status: str
     checks: dict[str, str]
-
-
-class UIConfigBYOKResponse(BaseModel):
-    openai: bool
-    gemini: bool
-    anthropic: bool
-
-
-class UIConfigResponse(BaseModel):
-    app_name: str
-    version: str
-    supported_providers: list[str]
-    supported_ocr_engines: list[str]
-    supported_retrieval_modes: list[str]
-    supported_postprocess_tasks: list[str]
-    supports_byok: UIConfigBYOKResponse
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "app_name": "DocuMind",
-                "version": "0.1.0",
-                "supported_providers": ["ollama", "openai", "gemini", "anthropic"],
-                "supported_ocr_engines": ["deepseek-ocr", "glm-ocr"],
-                "supported_retrieval_modes": ["dense", "hybrid"],
-                "supported_postprocess_tasks": ["cleanup", "summary", "extract_key_fields"],
-                "supports_byok": {
-                    "openai": True,
-                    "gemini": True,
-                    "anthropic": True,
-                },
-            }
-        }
-    )

@@ -880,7 +880,7 @@ export default function App() {
             <h1>{config.app_name}</h1>
             <p>Version {config.version}</p>
           </div>
-          <a href="https://github.com/pypi-ahmad/DocuMind/blob/main/docs/user-guide.md" target="_blank" rel="noopener noreferrer" className="header-link">Help & Docs</a>
+          <a href="https://github.com/pypi-ahmad/DocuMind/blob/main/docs/usage.md" target="_blank" rel="noopener noreferrer" className="header-link">Help & Docs</a>
         </div>
       </header>
 

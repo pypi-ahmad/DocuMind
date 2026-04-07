@@ -19,7 +19,7 @@ from app.api.routes.runtime import router as runtime_router
 from app.api.routes.ui import router as ui_router
 from app.api.routes.upload import router as upload_router
 from app.api.router import api_router
-from app.core.auth import PUBLIC_PATHS, get_current_user, router as auth_router
+from app.core.auth import PUBLIC_PATHS, router as auth_router
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIDMiddleware, RequestTimingMiddleware
