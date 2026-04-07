@@ -989,7 +989,13 @@ export default function App() {
             actionLabel={activePreset?.title ?? ACTION_LABELS[currentAction]}
             descriptor={currentDescriptor}
             values={formValues}
-            excludeFields={selectedPreset === null && usesLlmSelector ? GENERIC_SELECTOR_FIELDS : undefined}
+            excludeFields={
+              selectedPreset === null
+                ? usesLlmSelector ? GENERIC_SELECTOR_FIELDS : undefined
+                : visibleFields.some((f) => f.name === 'file_path')
+                  ? new Set(['file_path'])
+                  : undefined
+            }
             fieldError={fieldError}
             submitError={submitError}
             isSubmitting={isSubmitting}
