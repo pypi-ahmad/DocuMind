@@ -127,7 +127,7 @@ const PRESET_DEFAULTS: Record<WorkflowPresetKey, FormState> = {
 
 function parseFieldValue(field: UIFormField, rawValue: string | boolean | undefined): unknown {
   if (field.type === 'boolean') {
-    if (rawValue === '') {
+    if (rawValue === '' || rawValue === undefined) {
       return undefined
     }
 

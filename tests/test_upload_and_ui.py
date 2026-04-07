@@ -197,3 +197,75 @@ class TestUploadCleanup:
                 p.unlink(missing_ok=True)
 
         assert recent.exists(), "Recent file should be kept"
+
+
+# ---------------------------------------------------------------------------
+# Boolean field backend default tests — verify the contract the frontend relies on
+# ---------------------------------------------------------------------------
+
+
+class TestBooleanFieldDefaults:
+    """Verify backend Pydantic defaults for boolean fields.
+
+    The frontend boolean checkbox works as follows:
+      - Checked:       sends true   → backend receives true
+      - Unchecked:     sends false  → backend receives false
+      - Never touched: field omitted → backend uses Pydantic default
+
+    These tests verify the Pydantic defaults so the frontend contract is safe.
+    """
+
+    def test_prefer_structure_defaults_to_false_when_omitted(self) -> None:
+        from app.schemas.ocr import OCRExtractRequest
+
+        req = OCRExtractRequest(file_path="/tmp/test.png")
+        assert req.prefer_structure is False
+
+    def test_prefer_structure_explicit_true(self) -> None:
+        from app.schemas.ocr import OCRExtractRequest
+
+        req = OCRExtractRequest(file_path="/tmp/test.png", prefer_structure=True)
+        assert req.prefer_structure is True
+
+    def test_prefer_structure_explicit_false(self) -> None:
+        from app.schemas.ocr import OCRExtractRequest
+
+        req = OCRExtractRequest(file_path="/tmp/test.png", prefer_structure=False)
+        assert req.prefer_structure is False
+
+    def test_use_rerank_defaults_to_true_when_omitted(self) -> None:
+        from app.schemas.retrieval import DocumentQARequest
+
+        req = DocumentQARequest(
+            query="test", provider="ollama", model_name="llama3"
+        )
+        assert req.use_rerank is True
+
+    def test_use_rerank_explicit_false(self) -> None:
+        from app.schemas.retrieval import DocumentQARequest
+
+        req = DocumentQARequest(
+            query="test", provider="ollama", model_name="llama3", use_rerank=False
+        )
+        assert req.use_rerank is False
+
+    def test_use_rerank_explicit_true(self) -> None:
+        from app.schemas.retrieval import DocumentQARequest
+
+        req = DocumentQARequest(
+            query="test", provider="ollama", model_name="llama3", use_rerank=True
+        )
+        assert req.use_rerank is True
+
+    def test_boolean_fields_are_optional_in_ui_schema(self) -> None:
+        """All boolean UI form fields must be optional (required=False)."""
+        from app.api.routes.ui import _FORMS
+
+        for form_key in ("ocr_extract", "ocr_postprocess", "llm_generate", "retrieval_index_ocr", "retrieval_qa", "pipeline_run"):
+            descriptor = getattr(_FORMS, form_key)
+            for field in descriptor.fields:
+                if field.type == "boolean":
+                    assert not field.required, (
+                        f"{form_key}.{field.name} is boolean but marked required=True — "
+                        "booleans should be optional so omitting them uses the backend default"
+                    )
