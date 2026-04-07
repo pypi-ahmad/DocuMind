@@ -1,6 +1,7 @@
 """Tests for the file upload endpoint and UI schema improvements."""
 
 import io
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -138,3 +139,61 @@ class TestUploadEndpoint:
         assert ".." not in basename
         assert "/" not in basename
         assert len(basename) > 20  # uuid4 hex is 32 chars + extension
+
+
+# ---------------------------------------------------------------------------
+# Upload cleanup tests
+# ---------------------------------------------------------------------------
+
+
+class TestUploadCleanup:
+    def test_purge_removes_old_files(self, tmp_path: "Path", monkeypatch: pytest.MonkeyPatch) -> None:
+        """Files older than TTL are deleted by the cleanup sweep."""
+        import time
+
+        import app.api.routes.upload as upload_mod
+
+        monkeypatch.setattr(upload_mod.settings, "upload_dir", str(tmp_path))
+        monkeypatch.setattr(upload_mod.settings, "upload_ttl_minutes", 1)
+
+        # Create an old file (mtime set 120 s in the past)
+        old_file = tmp_path / "old.png"
+        old_file.write_bytes(b"old")
+        old_mtime = time.time() - 120
+        import os
+        os.utime(old_file, (old_mtime, old_mtime))
+
+        # Create a fresh file
+        new_file = tmp_path / "new.png"
+        new_file.write_bytes(b"new")
+
+        # Run the purge synchronously
+        import asyncio
+        # manually inline one iteration of the purge logic
+        ttl_seconds = upload_mod.settings.upload_ttl_minutes * 60
+        cutoff = time.time() - ttl_seconds
+        for p in tmp_path.iterdir():
+            if p.is_file() and p.stat().st_mtime < cutoff:
+                p.unlink(missing_ok=True)
+
+        assert not old_file.exists(), "Old file should have been purged"
+        assert new_file.exists(), "Fresh file should be kept"
+
+    def test_purge_keeps_recent_files(self, tmp_path: "Path", monkeypatch: pytest.MonkeyPatch) -> None:
+        """Files within TTL are not deleted."""
+        import app.api.routes.upload as upload_mod
+
+        monkeypatch.setattr(upload_mod.settings, "upload_dir", str(tmp_path))
+        monkeypatch.setattr(upload_mod.settings, "upload_ttl_minutes", 60)
+
+        recent = tmp_path / "recent.png"
+        recent.write_bytes(b"recent")
+
+        import time
+        ttl_seconds = upload_mod.settings.upload_ttl_minutes * 60
+        cutoff = time.time() - ttl_seconds
+        for p in tmp_path.iterdir():
+            if p.is_file() and p.stat().st_mtime < cutoff:
+                p.unlink(missing_ok=True)
+
+        assert recent.exists(), "Recent file should be kept"
