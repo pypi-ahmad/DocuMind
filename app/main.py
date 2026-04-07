@@ -52,9 +52,16 @@ OPENAPI_TAGS = [
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Starting %s v%s", settings.app_name, settings.version)
-    start_worker()
+    if settings.worker_enabled:
+        start_worker()
+    else:
+        logger.info(
+            "In-process worker disabled (DOCUMIND_WORKER_ENABLED=false). "
+            "Jobs will not be processed unless external workers are running."
+        )
     yield
-    await stop_worker()
+    if settings.worker_enabled:
+        await stop_worker()
     logger.info("Shutting down %s", settings.app_name)
 
 
@@ -163,17 +170,45 @@ def health_live() -> LivenessResponse:
     response_model=ReadinessResponse,
     tags=["health"],
     summary="Readiness probe",
-    description="Return a lightweight readiness view for the in-memory queue and model manager.",
+    description=(
+        "Return a readiness view that includes queue and model manager state, "
+        "and optional backend connectivity checks for Redis and Milvus."
+    ),
 )
 def health_ready() -> ReadinessResponse:
     queue_ok = _queue is not None
     model_manager_ok = model_manager is not None
-    all_ok = queue_ok and model_manager_ok
 
+    checks: dict[str, str] = {
+        "queue_initialized": "ok" if queue_ok else "error",
+        "model_manager_accessible": "ok" if model_manager_ok else "error",
+    }
+
+    # Redis backend connectivity
+    if settings.job_queue_backend.strip().lower() == "redis":
+        try:
+            import redis  # type: ignore[import-untyped]
+            r = redis.from_url(settings.redis_url, socket_connect_timeout=2)
+            r.ping()
+            checks["redis"] = "ok"
+        except Exception as exc:
+            checks["redis"] = f"error: {exc}"
+
+    # Milvus backend connectivity
+    if settings.vector_store_backend.strip().lower() == "milvus":
+        try:
+            from pymilvus import MilvusClient  # type: ignore[import-untyped]
+            client = MilvusClient(
+                uri=settings.milvus_uri,
+                token=settings.milvus_token or None,
+            )
+            client.list_collections()
+            checks["milvus"] = "ok"
+        except Exception as exc:
+            checks["milvus"] = f"error: {exc}"
+
+    all_ok = all(v == "ok" for v in checks.values())
     return ReadinessResponse(
         status="ok" if all_ok else "degraded",
-        checks={
-            "queue_initialized": queue_ok,
-            "model_manager_accessible": model_manager_ok,
-        },
+        checks=checks,
     )

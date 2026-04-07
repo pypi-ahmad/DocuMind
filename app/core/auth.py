@@ -33,6 +33,7 @@ PUBLIC_PATHS: set[str] = {
     "/info",
     "/auth/token",
     "/docs",
+    "/docs/oauth2-redirect",
     "/openapi.json",
     "/redoc",
 }
