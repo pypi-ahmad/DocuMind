@@ -1,5 +1,3 @@
-import pytest
-
 from app.services.chunking import chunk_for_retrieval
 
 

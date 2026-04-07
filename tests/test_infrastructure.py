@@ -1,7 +1,6 @@
 """Tests for auth module, queue facade dispatch, and store facade dispatch."""
 
 import time
-from typing import Any
 from unittest.mock import patch
 
 import jwt

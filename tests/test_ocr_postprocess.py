@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.core.model_manager import model_manager
 from app.main import app
-from app.providers.base import ProviderGenerateResult, ProviderUpstreamError
+from app.providers.base import ProviderUpstreamError
 from app.providers.ollama import OllamaProvider
 from app.providers.openai import OpenAIProvider
 from app.services.ocr_postprocess import build_postprocess_prompt

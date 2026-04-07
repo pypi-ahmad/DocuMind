@@ -234,10 +234,10 @@ curl -X POST http://localhost:8000/retrieval/qa \
 
 ### Detailed Usage Guide
 
-For the complete feature-by-feature reference — every endpoint, parameter, response shape, and configuration option — see **[docs/usage.md](docs/usage.md)**.
+For the complete feature-by-feature reference — every endpoint, parameter, response shape, and configuration option — see the **[Usage Guide](docs/usage.md)**.
 
 <details>
-<summary>Expand full table of contents</summary>
+<summary>Usage Guide — table of contents (23 sections)</summary>
 
 | # | Section |
 |--:|---------|
@@ -269,7 +269,7 @@ For the complete feature-by-feature reference — every endpoint, parameter, res
 
 ## API Overview
 
-38 endpoints organized into these groups:
+35 endpoints organized into these groups:
 
 | Group | Endpoints | Description |
 |-------|-----------|-------------|
@@ -278,7 +278,7 @@ For the complete feature-by-feature reference — every endpoint, parameter, res
 | `/ocr/*` | `POST /ocr/upload`, `/ocr/route`, `/ocr/extract`, `/ocr/postprocess` | File upload, engine routing, extraction, LLM post-processing |
 | `/llm/*` | `POST /llm/generate` | Direct text generation |
 | `/embeddings/*` | `POST /embeddings/generate` | Vector embedding generation |
-| `/retrieval/*` | `POST` index, index-ocr, search, hybrid-search, rerank, qa; `GET/DELETE` documents | Indexing, search, reranking, QA |
+| `/retrieval/*` | `POST` index, index-ocr, search, hybrid-search, rerank, qa; `GET` documents; `DELETE` documents, documents/{doc_id} | Indexing, search, reranking, QA, document management |
 | `/pipelines/*` | `GET /pipelines`, `POST /pipelines/run` | List and execute named pipelines |
 | `/jobs/*` | `POST /jobs`, `GET /jobs`, `GET /jobs/{id}` | Background job submission and polling |
 | `/providers/*` | `GET /providers`, `POST /providers/{id}/models` | Provider discovery and model listing |
