@@ -302,10 +302,35 @@ Test coverage includes: OCR extraction, PDF handling, post-processing, providers
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| **[Usage Guide](docs/usage.md)** | Complete how-to: all endpoints, parameters, response shapes, config reference |
-| [Development](docs/development.md) | Extension points for providers, OCR engines, pipelines |
+For the complete feature-by-feature reference — every endpoint, parameter, response shape, and configuration option — see the **[Usage Guide](docs/usage.md)**.
+
+## Extending DocuMind
+
+### Adding a Provider
+
+1. Create `app/providers/<name>.py` implementing `BaseProvider` from `app/providers/base.py`.
+2. Register it in `app/providers/registry.py`.
+3. Add the API key field to `app/core/settings.py` if it needs server-side credentials.
+4. Add tests in `tests/test_providers.py`.
+
+`BaseProvider` requires `generate(prompt, model_name, **kwargs) -> ProviderResponse` returning `text`, `usage`, and `metadata`.
+
+### Adding an OCR Engine
+
+1. Create `app/ocr/<name>.py` implementing `BaseOCREngine` from `app/ocr/base.py`.
+2. Register it in `app/ocr/router.py` so the auto-router can select it.
+3. Add settings to `app/core/settings.py` if needed (e.g. model name).
+4. Add tests in `tests/test_ocr.py`.
+
+`BaseOCREngine` requires `extract(image_data, prefer_structure) -> OCRResult`.
+
+### Adding a Pipeline
+
+Add an entry to `PIPELINE_DEFINITIONS` in `app/core/pipelines.py`. Each `PipelineDefinition` has a `name`, `description`, `steps` (ordered `PipelineStepDefinition` objects), and `required_input_fields` / `optional_input_fields`. No route changes needed — `GET /pipelines` and `POST /pipelines/run` discover definitions dynamically.
+
+### Adding Benchmarks
+
+Benchmark suites are defined in `app/eval/benchmarks.py` with inputs, expected outputs, and scoring criteria. The evaluator (`app/eval/evaluator.py`) runs them using metrics from `app/eval/metrics.py`. Stress tests live in `app/eval/stress.py` and are triggered via `POST /eval/stress`.
 
 ## Limitations
 
@@ -322,8 +347,6 @@ Test coverage includes: OCR extraction, PDF handling, post-processing, providers
 2. Cover behavior changes with tests.
 3. Update docs for any public API or configuration changes.
 4. Run `pytest` and `cd ui && npm run build` before opening a PR.
-
-See [docs/development.md](docs/development.md) for extension points.
 
 ## License
 
