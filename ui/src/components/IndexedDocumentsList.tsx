@@ -12,7 +12,11 @@ export function IndexedDocumentsList({ documents, isLoading, error }: IndexedDoc
       <h2>Indexed Documents</h2>
       {isLoading ? <p className="message info">Loading indexed document summaries…</p> : null}
       {error ? <p className="message error">{error}</p> : null}
-      {!isLoading && !error && documents.length === 0 ? <p className="field-help">No indexed documents found.</p> : null}
+      {!isLoading && !error && documents.length === 0 ? (
+        <p className="field-help">
+          No documents indexed yet. Use the <strong>Index Document</strong> workflow to add documents, then come back here to search them.
+        </p>
+      ) : null}
 
       {!isLoading && !error && documents.length > 0 ? (
         <ul className="document-summary-list">
