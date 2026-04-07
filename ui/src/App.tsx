@@ -74,7 +74,7 @@ const PRESET_OPTIONS: Array<{
   {
     key: 'ocr_summary',
     title: 'Extract & Summarize',
-    description: 'Extract text from a document and generate a summary.',
+    description: 'Extract text and generate a summary.',
     flowLabel: 'Multi step',
   },
   {
