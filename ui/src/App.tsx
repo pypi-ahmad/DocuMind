@@ -1024,7 +1024,7 @@ export default function App() {
 
           {requestPreview !== null ? <JsonBlock title="Request Preview" value={requestPreview} /> : null}
 
-          {intermediateResult !== null ? <JsonBlock title="Intermediate OCR Result" value={intermediateResult} /> : null}
+          {intermediateResult !== null ? <FormattedResult title="Intermediate OCR Result" value={intermediateResult} /> : null}
 
           {submittedJob ? (
             <>
