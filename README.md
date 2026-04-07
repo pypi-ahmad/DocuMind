@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/assets/documind-logo.svg" alt="DocuMind" width="140" />
-</p>
-
 <h1 align="center">DocuMind</h1>
 
 <p align="center">
@@ -107,9 +103,6 @@ app/
   workers/         Job queue (memory/Redis), background worker, standalone CLI
 docs/
   usage.md         Complete usage guide with curl examples and configuration reference
-  architecture.md  Module map, request flows, system boundaries
-  api-overview.md  Endpoint groups, job mode, BYOK behavior
-  workflows.md     End-to-end workflow walkthroughs
   development.md   Extension points for providers, OCR engines, pipelines
 tests/             16 test modules covering OCR, providers, retrieval, jobs, eval, upload, schemas
 ui/                React 19 + TypeScript + Vite frontend
@@ -312,9 +305,6 @@ Test coverage includes: OCR extraction, PDF handling, post-processing, providers
 | Document | Description |
 |----------|-------------|
 | **[Usage Guide](docs/usage.md)** | Complete how-to: all endpoints, parameters, response shapes, config reference |
-| [Architecture](docs/architecture.md) | Module map, request flows, system boundaries |
-| [API Overview](docs/api-overview.md) | Endpoint groups, job mode, BYOK behavior |
-| [Workflows](docs/workflows.md) | End-to-end workflow walkthroughs with payloads |
 | [Development](docs/development.md) | Extension points for providers, OCR engines, pipelines |
 
 ## Limitations
