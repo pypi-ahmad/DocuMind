@@ -938,7 +938,6 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-row">
           <div className="app-brand">
-            <img src="/favicon.svg" alt="DocuMind logo" className="app-logo" width="40" height="40" />
             <div>
               <h1>{config.app_name}</h1>
               <p className="app-tagline">Document intelligence — extract, search, and ask</p>
