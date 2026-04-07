@@ -26,11 +26,11 @@ export function WorkflowPresetCards({
     <section className="card preset-section">
       <div className="preset-section-header">
         <div>
-          <h2>Workflow Presets</h2>
-          <p className="field-help">Guided flows layered on top of the existing backend actions.</p>
+          <h2>What would you like to do?</h2>
+          <p className="field-help">Choose a task to get started.</p>
         </div>
         <button type="button" className="secondary-button" onClick={onClear} disabled={disabled || selectedPreset === null}>
-          Use Generic Form Mode
+          Advanced mode
         </button>
       </div>
 

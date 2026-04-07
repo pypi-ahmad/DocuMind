@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 
-import type { ActionKey, FormState, SubmitMode, UIFormDescriptor, UIFormField } from '../types'
+import type { FormState, SubmitMode, UIFormDescriptor, UIFormField } from '../types'
 
 interface DynamicFormProps {
   actionLabel: string
@@ -13,6 +13,7 @@ interface DynamicFormProps {
   disabled?: boolean
   submitMode: SubmitMode
   supportsJobMode: boolean
+  isPresetMode?: boolean
   onSubmitModeChange: (mode: SubmitMode) => void
   onChange: (fieldName: string, value: string | boolean) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
@@ -29,7 +30,7 @@ function renderInput(
       <textarea
         id={field.name}
         value={typeof value === 'string' ? value : ''}
-        placeholder={`{\n  "key": "value"\n}`}
+        placeholder={field.placeholder || `{\n  "key": "value"\n}`}
         rows={6}
         disabled={disabled}
         onChange={(event) => onChange(field.name, event.target.value)}
@@ -38,17 +39,19 @@ function renderInput(
   }
 
   if (field.type === 'boolean') {
+    const checked = value === 'true' || value === true
     return (
-      <select
-        id={field.name}
-        value={typeof value === 'string' ? value : ''}
+      <label className="toggle-row" htmlFor={`${field.name}-toggle`}>
+        <input
+          id={`${field.name}-toggle`}
+          type="checkbox"
+          className="toggle-checkbox"
+          checked={checked}
           disabled={disabled}
-        onChange={(event) => onChange(field.name, event.target.value)}
-      >
-        <option value="">Use backend default</option>
-        <option value="true">True</option>
-        <option value="false">False</option>
-      </select>
+          onChange={(event) => onChange(field.name, event.target.checked ? 'true' : '')}
+        />
+        <span className="toggle-label">{checked ? 'On' : 'Off'}</span>
+      </label>
     )
   }
 
@@ -59,6 +62,7 @@ function renderInput(
         type="number"
         step={field.type === 'integer' ? '1' : 'any'}
         value={typeof value === 'string' ? value : ''}
+        placeholder={field.placeholder ?? ''}
         disabled={disabled}
         onChange={(event) => onChange(field.name, event.target.value)}
       />
@@ -70,9 +74,33 @@ function renderInput(
       id={field.name}
       type="text"
       value={typeof value === 'string' ? value : ''}
+      placeholder={field.placeholder ?? ''}
       disabled={disabled}
       onChange={(event) => onChange(field.name, event.target.value)}
     />
+  )
+}
+
+function FieldRow({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: UIFormField
+  value: string | boolean | undefined
+  disabled: boolean
+  onChange: (fieldName: string, value: string | boolean) => void
+}) {
+  return (
+    <label key={field.name} className="field-group" htmlFor={field.name}>
+      <span className="field-label">
+        {field.label || field.name}
+        {field.required ? <strong className="required-marker"> *</strong> : null}
+      </span>
+      <span className="field-help">{field.description}</span>
+      {renderInput(field, value, disabled, onChange)}
+    </label>
   )
 }
 
@@ -87,6 +115,7 @@ export function DynamicForm({
   disabled = false,
   submitMode,
   supportsJobMode,
+  isPresetMode = false,
   onSubmitModeChange,
   onChange,
   onSubmit,
@@ -95,32 +124,39 @@ export function DynamicForm({
     ? descriptor.fields.filter((f) => !excludeFields.has(f.name))
     : descriptor.fields
 
+  const requiredFields = visibleFields.filter((f) => f.required)
+  const optionalFields = visibleFields.filter((f) => !f.required)
+
   return (
     <section className="card">
       <h2>{actionLabel}</h2>
       <form className="form-grid" onSubmit={onSubmit}>
-        {visibleFields.map((field) => (
-          <label key={field.name} className="field-group" htmlFor={field.name}>
-            <span className="field-label">
-              {field.name}
-              {field.required ? <strong className="required-marker"> *</strong> : null}
-            </span>
-            <span className="field-help">{field.description}</span>
-            {renderInput(field, values[field.name], disabled, onChange)}
-          </label>
+        {requiredFields.map((field) => (
+          <FieldRow key={field.name} field={field} value={values[field.name]} disabled={disabled} onChange={onChange} />
         ))}
 
-        {supportsJobMode && (
+        {optionalFields.length > 0 && (
+          <details className="advanced-options">
+            <summary className="advanced-options-toggle">Advanced options ({optionalFields.length})</summary>
+            <div className="form-grid advanced-options-content">
+              {optionalFields.map((field) => (
+                <FieldRow key={field.name} field={field} value={values[field.name]} disabled={disabled} onChange={onChange} />
+              ))}
+            </div>
+          </details>
+        )}
+
+        {supportsJobMode && !isPresetMode && (
           <label className="field-group" htmlFor="submit-mode">
-            <span className="field-label">Submit mode</span>
+            <span className="field-label">How to run</span>
             <select
               id="submit-mode"
               value={submitMode}
               disabled={disabled}
               onChange={(e) => onSubmitModeChange(e.target.value as SubmitMode)}
             >
-              <option value="direct">Direct request</option>
-              <option value="job">Submit as background job</option>
+              <option value="direct">Run immediately</option>
+              <option value="job">Run in background</option>
             </select>
           </label>
         )}

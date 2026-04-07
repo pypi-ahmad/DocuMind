@@ -52,6 +52,8 @@ export interface UIFormField {
   type: UIFieldType
   required: boolean
   description: string
+  label?: string
+  placeholder?: string
 }
 
 export interface UIFormDescriptor {

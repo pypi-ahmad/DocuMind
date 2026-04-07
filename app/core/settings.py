@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # -- Worker --
     worker_enabled: bool = True  # set False to run API-only (requires Redis backend)
 
+    # -- Upload --
+    upload_dir: str = ""  # empty = system temp dir
+    max_upload_size_mb: int = Field(default=50, gt=0)
+
     # -- Auth --
     auth_enabled: bool = False
     auth_secret_key: str = "change-me-in-production"

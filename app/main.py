@@ -17,6 +17,7 @@ from app.api.routes.pipelines import router as pipelines_router
 from app.api.routes.providers import router as providers_router
 from app.api.routes.runtime import router as runtime_router
 from app.api.routes.ui import router as ui_router
+from app.api.routes.upload import router as upload_router
 from app.api.router import api_router
 from app.core.auth import PUBLIC_PATHS, get_current_user, router as auth_router
 from app.core.errors import register_exception_handlers
@@ -73,12 +74,12 @@ app = FastAPI(
         "evaluating, and querying document content across pluggable providers."
     ),
     contact={
-        "name": "DocuMind API Support",
-        "url": "https://example.com/support",
+        "name": "DocuMind",
+        "url": "https://github.com/pypi-ahmad/DocuMind",
     },
     license_info={
-        "name": "License Placeholder",
-        "url": "https://example.com/license",
+        "name": "MIT License",
+        "url": "https://github.com/pypi-ahmad/DocuMind/blob/main/LICENSE",
     },
     openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
@@ -149,6 +150,7 @@ app.include_router(runtime_router)
 app.include_router(ocr_router)
 app.include_router(eval_router)
 app.include_router(ui_router)
+app.include_router(upload_router)
 
 
 # -- Health probes --

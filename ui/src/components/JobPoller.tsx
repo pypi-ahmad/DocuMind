@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { fetchJob } from '../api'
 import type { JobResponse } from '../types'
+import { FormattedResult } from './FormattedResult'
 import { JsonBlock } from './JsonBlock'
 
 interface JobPollerProps {
@@ -64,7 +65,7 @@ export function JobPoller({ job: initialJob, onJobUpdate }: JobPollerProps) {
       {job.status === 'failed' && job.error && <JsonBlock title="Job Error" value={{ error: job.error }} />}
 
       {job.status === 'completed' && job.result && (
-        <JsonBlock title="Job Result" value={job.result} />
+        <FormattedResult title="Job Result" value={job.result} />
       )}
     </div>
   )
