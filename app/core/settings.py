@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     # -- Upload --
     upload_dir: str = ""  # empty = system temp dir
     max_upload_size_mb: int = Field(default=50, gt=0)
+    upload_ttl_minutes: int = Field(default=60, gt=0)  # auto-delete after N minutes
 
     # -- Auth --
     auth_enabled: bool = False

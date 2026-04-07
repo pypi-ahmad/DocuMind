@@ -1,7 +1,9 @@
 """File upload endpoint for browser-based document submission."""
 
+import asyncio
 import logging
 import tempfile
+import time
 import uuid
 from pathlib import Path
 
@@ -68,3 +70,50 @@ async def upload_document(file: UploadFile) -> dict[str, str]:
     logger.info("Uploaded %s (%d bytes) → %s", file.filename, len(content), dest)
 
     return {"file_path": str(dest)}
+
+
+# ---------------------------------------------------------------------------
+# Background cleanup — delete uploads older than upload_ttl_minutes
+# ---------------------------------------------------------------------------
+
+_cleanup_task: asyncio.Task[None] | None = None
+
+
+async def _purge_stale_uploads() -> None:
+    """Periodically remove uploaded files older than the configured TTL."""
+    ttl_seconds = settings.upload_ttl_minutes * 60
+    interval = max(ttl_seconds / 2, 60)  # check at half-TTL, minimum 60 s
+    while True:
+        try:
+            upload_dir = _upload_dir()
+            cutoff = time.time() - ttl_seconds
+            for path in upload_dir.iterdir():
+                if path.is_file() and path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+                    logger.debug("Purged stale upload: %s", path.name)
+        except Exception:
+            logger.exception("Error during upload cleanup")
+        await asyncio.sleep(interval)
+
+
+def start_upload_cleanup() -> None:
+    """Start the background cleanup task."""
+    global _cleanup_task  # noqa: PLW0603
+    if _cleanup_task is None:
+        _cleanup_task = asyncio.get_event_loop().create_task(_purge_stale_uploads())
+        logger.info(
+            "Upload cleanup started (TTL=%d min)", settings.upload_ttl_minutes
+        )
+
+
+async def stop_upload_cleanup() -> None:
+    """Cancel the background cleanup task."""
+    global _cleanup_task  # noqa: PLW0603
+    if _cleanup_task is not None:
+        _cleanup_task.cancel()
+        try:
+            await _cleanup_task
+        except asyncio.CancelledError:
+            pass
+        _cleanup_task = None
+        logger.info("Upload cleanup stopped")

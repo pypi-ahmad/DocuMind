@@ -52,6 +52,8 @@ OPENAPI_TAGS = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    from app.api.routes.upload import start_upload_cleanup, stop_upload_cleanup
+
     logger.info("Starting %s v%s", settings.app_name, settings.version)
     if settings.worker_enabled:
         start_worker()
@@ -60,7 +62,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "In-process worker disabled (DOCUMIND_WORKER_ENABLED=false). "
             "Jobs will not be processed unless external workers are running."
         )
+    start_upload_cleanup()
     yield
+    await stop_upload_cleanup()
     if settings.worker_enabled:
         await stop_worker()
     logger.info("Shutting down %s", settings.app_name)
