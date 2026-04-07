@@ -165,7 +165,7 @@ export function DynamicForm({
         {submitError ? <p className="message error">{submitError}</p> : null}
 
         <button type="submit" disabled={disabled || isSubmitting}>
-          {isSubmitting ? 'Submitting…' : submitMode === 'job' && supportsJobMode ? 'Submit Job' : 'Submit'}
+          {isSubmitting ? 'Submitting…' : isPresetMode ? actionLabel : submitMode === 'job' && supportsJobMode ? 'Submit Job' : 'Submit'}
         </button>
       </form>
     </section>

@@ -74,9 +74,10 @@ async def list_provider_models(
     api_key = payload.api_key.strip() if payload and payload.api_key else None
     resolved_key = resolve_provider_api_key(provider_name, api_key)
     if provider_name in API_KEY_REQUIRED and not resolved_key:
+        provider_display = provider_name.capitalize()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{provider_name} requires api_key",
+            detail=f"{provider_display} requires an API key. Enter your key in the API key field.",
         )
 
     try:

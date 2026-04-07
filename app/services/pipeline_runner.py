@@ -12,11 +12,13 @@ class PipelineNotFoundError(Exception):
     pass
 
 
-def list_pipelines() -> list[dict[str, str]]:
+def list_pipelines() -> list[dict]:
     return [
         {
             "pipeline_name": definition.name,
             "description": definition.description,
+            "required_input_fields": list(definition.required_input_fields),
+            "optional_input_fields": list(definition.optional_input_fields),
         }
         for definition in PIPELINE_DEFINITIONS.values()
     ]

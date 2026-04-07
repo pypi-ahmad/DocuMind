@@ -44,6 +44,18 @@ function isOCRExtractResponse(value: unknown): value is { text: string; pages?: 
   )
 }
 
+function isOCRIndexResponse(
+  value: unknown,
+): value is { doc_id: string; indexed_chunk_count: number; ocr_engine?: string; indexed_text_length?: number } {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    'doc_id' in value &&
+    'indexed_chunk_count' in value &&
+    typeof (value as Record<string, unknown>).indexed_chunk_count === 'number',
+  )
+}
+
 function downloadJson(value: unknown) {
   const jsonText = JSON.stringify(value, null, 2)
   const blob = new Blob([jsonText], { type: 'application/json' })
@@ -52,6 +64,33 @@ function downloadJson(value: unknown) {
   const a = document.createElement('a')
   a.href = url
   a.download = `documind-result-${timestamp}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function downloadText(text: string) {
+  const blob = new Blob([text], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `documind-result-${timestamp}.txt`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function downloadCsv(fields: Record<string, unknown>) {
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`
+  const rows = Object.entries(fields).map(([key, val]) =>
+    [escape(key), escape(typeof val === 'object' ? JSON.stringify(val) : String(val ?? ''))].join(',')
+  )
+  const csv = ['Field,Value', ...rows].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `documind-fields-${timestamp}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -76,6 +115,9 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
             <button type="button" className="small-action-button" onClick={() => copyText(value.text, setCopied)}>
               {copied ? 'Copied!' : 'Copy text'}
             </button>
+            <button type="button" className="small-action-button" onClick={() => downloadText(value.text)}>
+              Download as text
+            </button>
             <button type="button" className="small-action-button" onClick={() => downloadJson(value)}>
               Download JSON
             </button>
@@ -96,6 +138,9 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
           <div className="json-block-actions">
             <button type="button" className="small-action-button" onClick={() => copyText(value.answer, setCopied)}>
               {copied ? 'Copied!' : 'Copy answer'}
+            </button>
+            <button type="button" className="small-action-button" onClick={() => downloadText(value.answer)}>
+              Download as text
             </button>
             <button type="button" className="small-action-button" onClick={() => downloadJson(value)}>
               Download JSON
@@ -144,6 +189,9 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
             <button type="button" className="small-action-button" onClick={() => copyText(value.output_text, setCopied)}>
               {copied ? 'Copied!' : 'Copy text'}
             </button>
+            <button type="button" className="small-action-button" onClick={() => downloadText(value.output_text)}>
+              Download as text
+            </button>
             <button type="button" className="small-action-button" onClick={() => downloadJson(value)}>
               Download JSON
             </button>
@@ -165,6 +213,9 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
           <div className="json-block-actions">
             <button type="button" className="small-action-button" onClick={() => copyText(JSON.stringify(fields, null, 2), setCopied)}>
               {copied ? 'Copied!' : 'Copy fields'}
+            </button>
+            <button type="button" className="small-action-button" onClick={() => downloadCsv(fields)}>
+              Download as CSV
             </button>
             <button type="button" className="small-action-button" onClick={() => downloadJson(value)}>
               Download JSON
@@ -202,12 +253,47 @@ export function FormattedResult({ title, value }: FormattedResultProps) {
             <button type="button" className="small-action-button" onClick={() => copyText(value.text, setCopied)}>
               {copied ? 'Copied!' : 'Copy text'}
             </button>
+            <button type="button" className="small-action-button" onClick={() => downloadText(value.text)}>
+              Download as text
+            </button>
             <button type="button" className="small-action-button" onClick={() => downloadJson(value)}>
               Download JSON
             </button>
           </div>
         </div>
         <div className="formatted-prose">{value.text}</div>
+        <JsonBlock title="Show raw JSON" value={value} collapsible />
+      </section>
+    )
+  }
+
+  // Index document success
+  if (isOCRIndexResponse(value)) {
+    const chars = value.indexed_text_length ? ` · ${value.indexed_text_length.toLocaleString()} characters` : ''
+    return (
+      <section className="card">
+        <div className="json-block-header">
+          <h2>{title}</h2>
+          <div className="json-block-actions">
+            <button type="button" className="small-action-button" onClick={() => downloadJson(value)}>
+              Download JSON
+            </button>
+          </div>
+        </div>
+        <p className="result-index-stat">
+          <span className="result-index-label">Document ID</span>
+          <strong>{value.doc_id}</strong>
+        </p>
+        <p className="result-index-stat">
+          <span className="result-index-label">Sections indexed</span>
+          <strong>{value.indexed_chunk_count}{chars}</strong>
+        </p>
+        {value.ocr_engine ? (
+          <p className="result-index-stat">
+            <span className="result-index-label">OCR engine</span>
+            <span>{value.ocr_engine}</span>
+          </p>
+        ) : null}
         <JsonBlock title="Show raw JSON" value={value} collapsible />
       </section>
     )

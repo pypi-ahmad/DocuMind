@@ -1,5 +1,21 @@
 import type { PipelineSummary } from '../types'
 
+const PIPELINE_LABELS: Record<string, string> = {
+  ocr_extract_only: 'Extract Text Only',
+  ocr_extract_then_summary: 'Extract & Summarize',
+  ocr_extract_then_key_fields: 'Extract & Get Key Fields',
+}
+
+function humanizePipelineName(name: string): string {
+  return (
+    PIPELINE_LABELS[name] ??
+    name
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  )
+}
+
 interface PipelineSelectorProps {
   pipelines: PipelineSummary[]
   isLoading: boolean
@@ -33,7 +49,7 @@ export function PipelineSelector({
           >
             {pipelines.map((pipeline) => (
               <option key={pipeline.pipeline_name} value={pipeline.pipeline_name}>
-                {pipeline.pipeline_name}
+                {humanizePipelineName(pipeline.pipeline_name)}
               </option>
             ))}
           </select>

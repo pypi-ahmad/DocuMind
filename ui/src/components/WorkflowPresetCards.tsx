@@ -29,9 +29,6 @@ export function WorkflowPresetCards({
           <h2>What would you like to do?</h2>
           <p className="field-help">Choose a task to get started.</p>
         </div>
-        <button type="button" className="secondary-button" onClick={onClear} disabled={disabled || selectedPreset === null}>
-          Advanced mode
-        </button>
       </div>
 
       <div className="preset-grid">
@@ -51,6 +48,12 @@ export function WorkflowPresetCards({
             </button>
           )
         })}
+      </div>
+
+      <div className="preset-advanced-link">
+        <button type="button" className="text-link" onClick={onClear} disabled={disabled}>
+          Switch to advanced mode
+        </button>
       </div>
     </section>
   )

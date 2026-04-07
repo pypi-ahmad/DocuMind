@@ -8,12 +8,20 @@ import { JsonBlock } from './JsonBlock'
 interface JobPollerProps {
   job: JobResponse
   onJobUpdate?: (job: JobResponse) => void
+  isPresetMode?: boolean
 }
 
 const POLL_INTERVAL_MS = 2000
+const JOB_STATUS_LABELS: Record<string, string> = {
+  pending: 'Waiting…',
+  processing: 'In progress…',
+  completed: 'Done',
+  failed: 'Failed',
+}
+
 const TERMINAL_STATUSES = new Set(['completed', 'failed'])
 
-export function JobPoller({ job: initialJob, onJobUpdate }: JobPollerProps) {
+export function JobPoller({ job: initialJob, onJobUpdate, isPresetMode = false }: JobPollerProps) {
   const [job, setJob] = useState<JobResponse>(initialJob)
   const [pollError, setPollError] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -51,21 +59,47 @@ export function JobPoller({ job: initialJob, onJobUpdate }: JobPollerProps) {
 
   return (
     <div className="job-poller">
-      <div className="job-status-row">
-        <span className="field-label">Job ID:</span> <code>{job.job_id}</code>
-      </div>
+      {!isPresetMode && (
+        <div className="job-status-row">
+          <span className="field-label">Job ID:</span> <code>{job.job_id}</code>
+        </div>
+      )}
       <div className="job-status-row">
         <span className="field-label">Status:</span>{' '}
-        <span className={`status-badge ${statusClass}`}>{job.status}</span>
+        <span className={`status-badge ${statusClass}`}>
+          {isPresetMode ? (JOB_STATUS_LABELS[job.status] ?? job.status) : job.status}
+        </span>
         {!isTerminal && !pollError && <span className="spinner" />}
       </div>
 
-      {pollError && <JsonBlock title="Polling Error" value={{ error: pollError }} />}
+      {pollError && (
+        isPresetMode
+          ? <p className="message error">{pollError}</p>
+          : <JsonBlock title="Polling Error" value={{ error: pollError }} />
+      )}
 
-      {job.status === 'failed' && job.error && <JsonBlock title="Job Error" value={{ error: job.error }} />}
+      {job.status === 'failed' && job.error && (
+        isPresetMode
+          ? <p className="message error">{job.error}</p>
+          : <JsonBlock title="Job Error" value={{ error: job.error }} />
+      )}
 
       {job.status === 'completed' && job.result && (
         <FormattedResult title="Job Result" value={job.result} />
+      )}
+
+      {isPresetMode && (
+        <details className="technical-details">
+          <summary className="technical-details-toggle">Technical details</summary>
+          <div className="technical-details-content">
+            <div className="job-status-row">
+              <span className="field-label">Job ID:</span> <code>{job.job_id}</code>
+            </div>
+            <div className="job-status-row">
+              <span className="field-label">Raw status:</span> <code>{job.status}</code>
+            </div>
+          </div>
+        </details>
       )}
     </div>
   )

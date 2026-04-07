@@ -42,6 +42,8 @@ class UIRouteMap(BaseModel):
 class UIConfigResponse(BaseModel):
     app_name: str
     version: str
+    vector_store_backend: str
+    auth_enabled: bool
     providers: list[UIProviderOption]
     ocr: UIOCRCapability
     retrieval: UIRetrievalCapability

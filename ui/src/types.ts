@@ -41,6 +41,8 @@ export interface UIRouteMap {
 export interface UIConfigResponse {
   app_name: string
   version: string
+  vector_store_backend: string
+  auth_enabled: boolean
   providers: UIProviderOption[]
   ocr: UIOCRCapability
   retrieval: UIRetrievalCapability
@@ -91,6 +93,8 @@ export interface ProviderModelsResponse {
 export interface PipelineSummary {
   pipeline_name: string
   description: string
+  required_input_fields: string[]
+  optional_input_fields: string[]
 }
 
 export interface DocumentSummary {

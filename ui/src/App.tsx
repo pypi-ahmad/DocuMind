@@ -4,6 +4,9 @@ import {
   ACTION_ENDPOINTS,
   ACTION_JOB_TYPES,
   API_BASE_URL,
+  clearIndexedDocuments,
+  deleteIndexedDocument,
+  fetchHealth,
   fetchIndexedDocuments,
   fetchPipelines,
   loadUiConfig,
@@ -35,6 +38,14 @@ import type {
   WorkflowPresetKey,
   WorkflowStepStatus,
 } from './types'
+
+function slugifyFilename(name: string): string {
+  return name
+    .replace(/\.[^/.]+$/, '')       // strip extension
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')   // non-alphanumeric → hyphen
+    .replace(/^-+|-+$/g, '')        // trim leading/trailing hyphens
+}
 
 const ACTION_LABELS: Record<ActionKey, string> = {
   ocr_extract: 'Extract Text (OCR)',
@@ -198,6 +209,29 @@ function pickDescriptorFields(descriptor: UIFormDescriptor, fieldNames: string[]
   }
 }
 
+const PIPELINE_FIELD_REGISTRY: Record<string, { type: UIFormField['type']; label: string; description: string; placeholder?: string }> = {
+  file_path: { type: 'string', label: 'Document file', description: 'The document to process.' },
+  engine: { type: 'string', label: 'OCR engine', description: 'Override the automatic engine selection (leave blank for auto).', placeholder: 'e.g. deepseek-ocr' },
+  prefer_structure: { type: 'boolean', label: 'Preserve formatting', description: 'Keep headings, lists, and tables when possible.' },
+  temperature: { type: 'number', label: 'Creativity', description: 'Controls randomness (lower = more focused, higher = more creative).', placeholder: 'e.g. 0.7' },
+  max_output_tokens: { type: 'integer', label: 'Max response length', description: 'Maximum length of the response (in tokens).', placeholder: 'e.g. 1024' },
+}
+
+function buildPipelineDescriptor(pipeline: PipelineSummary): UIFormDescriptor {
+  const toField = (name: string, required: boolean): UIFormField | null => {
+    if (GENERIC_SELECTOR_FIELDS.has(name)) return null
+    const meta = PIPELINE_FIELD_REGISTRY[name]
+    if (!meta) return null
+    return { name, required, ...meta }
+  }
+  return {
+    fields: [
+      ...pipeline.required_input_fields.map((n) => toField(n, true)).filter((f): f is UIFormField => f !== null),
+      ...pipeline.optional_input_fields.map((n) => toField(n, false)).filter((f): f is UIFormField => f !== null),
+    ],
+  }
+}
+
 function getPresetDescriptor(forms: UIFormsResponse, preset: WorkflowPresetKey): UIFormDescriptor {
   switch (preset) {
     case 'ocr_extract':
@@ -307,20 +341,27 @@ export default function App() {
   const [isLoadingIndexedDocuments, setIsLoadingIndexedDocuments] = useState(false)
   const [indexedDocumentsError, setIndexedDocumentsError] = useState<string | null>(null)
 
+  const [serverOnline, setServerOnline] = useState<boolean | null>(null)
+
   const currentAction = selectedPreset ? PRESET_TO_ACTION[selectedPreset] : selectedAction
   const activePreset = selectedPreset ? PRESET_OPTIONS.find((preset) => preset.key === selectedPreset) ?? null : null
   const activeJob = jobSnapshot ?? submittedJob
   const isJobPolling = Boolean(activeJob && !TERMINAL_JOB_STATUSES.has(activeJob.status))
   const isActionBusy = isSubmitting || isJobPolling
 
+  const usesPipelineSelector = selectedPreset === 'run_named_pipeline'
+  const activePipeline = usesPipelineSelector
+    ? (pipelines.find((p) => p.pipeline_name === selectedPipelineName) ?? null)
+    : null
+
   const usesLlmSelector =
     (!selectedPreset && PROVIDER_ACTIONS.has(currentAction)) ||
     selectedPreset === 'ocr_summary' ||
     selectedPreset === 'ocr_key_fields' ||
-    selectedPreset === 'ask_indexed_documents'
+    selectedPreset === 'ask_indexed_documents' ||
+    (usesPipelineSelector && (activePipeline?.required_input_fields.includes('provider') ?? false))
 
   const usesEmbeddingSelector = selectedPreset === 'ocr_index_document'
-  const usesPipelineSelector = selectedPreset === 'run_named_pipeline'
 
   const selectorConfig = useMemo(() => {
     if (usesEmbeddingSelector) {
@@ -328,8 +369,8 @@ export default function App() {
         providerFieldName: 'embedding_provider',
         modelFieldName: 'embedding_model_name',
         apiKeyFieldName: 'api_key',
-        providerLabel: 'Embedding Provider',
-        modelLabel: 'Embedding Model',
+        providerLabel: 'Search Provider',
+        modelLabel: 'Search Model',
       }
     }
 
@@ -351,12 +392,16 @@ export default function App() {
       return null
     }
 
+    if (selectedPreset === 'run_named_pipeline') {
+      return activePipeline ? buildPipelineDescriptor(activePipeline) : pickDescriptorFields(forms.pipeline_run, ['input'])
+    }
+
     if (selectedPreset) {
       return getPresetDescriptor(forms, selectedPreset)
     }
 
     return forms[currentAction]
-  }, [forms, currentAction, selectedPreset])
+  }, [forms, currentAction, selectedPreset, activePipeline])
 
   const visibleFields = useMemo(() => {
     if (!currentDescriptor) {
@@ -435,6 +480,11 @@ export default function App() {
       }
 
       payload.pipeline_name = selectedPipelineName.trim()
+
+      if (activePipeline) {
+        const { pipeline_name, ...inputFields } = payload as Record<string, unknown>
+        return { pipeline_name, input: inputFields }
+      }
     }
 
     return payload
@@ -466,16 +516,16 @@ export default function App() {
     }
 
     if (job.status === 'completed') {
-      updateLastWorkflowStep('completed', `Job ${job.job_id} completed.`)
+      updateLastWorkflowStep('completed', 'Completed successfully.')
       return
     }
 
     if (job.status === 'failed') {
-      updateLastWorkflowStep('failed', job.error ?? `Job ${job.job_id} failed.`)
+      updateLastWorkflowStep('failed', job.error ?? 'Step failed.')
       return
     }
 
-    updateLastWorkflowStep('running', `Job ${job.job_id} is ${job.status}.`)
+    updateLastWorkflowStep('running')
   }
 
   async function runMultiStepOcrWorkflow(task: 'summary' | 'extract_key_fields') {
@@ -564,7 +614,7 @@ export default function App() {
           {
             label: `Step 2: ${workflowLabel}`,
             status: 'running',
-            detail: `Job ${jobResponse.job_id} submitted. Polling for completion.`,
+            detail: 'Running in background. Checking for updates…',
           },
         ])
         return
@@ -634,7 +684,7 @@ export default function App() {
             {
               label: activePreset?.title ?? ACTION_LABELS[currentAction],
               status: 'running',
-              detail: `Job ${jobResponse.job_id} submitted. Polling for completion.`,
+              detail: 'Running in background. Checking for updates…',
             },
           ])
         }
@@ -670,6 +720,17 @@ export default function App() {
       setIsSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    let cancelled = false
+    async function check() {
+      const ok = await fetchHealth()
+      if (!cancelled) setServerOnline(ok)
+    }
+    void check()
+    const interval = setInterval(() => { void check() }, 30_000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -876,13 +937,34 @@ export default function App() {
     <main className="app-shell">
       <header className="app-header">
         <div className="app-header-row">
-          <div>
-            <h1>{config.app_name}</h1>
-            <p>Version {config.version}</p>
+          <div className="app-brand">
+            <img src="/favicon.svg" alt="DocuMind logo" className="app-logo" width="40" height="40" />
+            <div>
+              <h1>{config.app_name}</h1>
+              <p className="app-tagline">Document intelligence — extract, search, and ask</p>
+            </div>
           </div>
-          <a href="https://github.com/pypi-ahmad/DocuMind/blob/main/docs/usage.md" target="_blank" rel="noopener noreferrer" className="header-link">Help & Docs</a>
+          <div className="header-right">
+            {serverOnline === false ? (
+              <span className="server-status server-status--offline">Server unreachable</span>
+            ) : serverOnline === true ? (
+              <span className="server-status server-status--online">Connected</span>
+            ) : null}
+          </div>
         </div>
       </header>
+
+      {config.vector_store_backend === 'memory' ? (
+        <p className="message info storage-warning">
+          <strong>Temporary storage:</strong> Indexed documents are stored in memory and will be lost when the server restarts. Configure a persistent vector store to retain them.
+        </p>
+      ) : null}
+
+      {!config.auth_enabled ? (
+        <p className="message info storage-warning">
+          <strong>Open access:</strong> Authentication is disabled. Anyone who can reach this address can use the app. Enable authentication before exposing it to a network.
+        </p>
+      ) : null}
 
       <WorkflowPresetCards
         presets={PRESET_OPTIONS}
@@ -961,7 +1043,7 @@ export default function App() {
         <div>
           {selectorConfig ? (
             <section className="card form-section-stack-item">
-              <h2>{usesEmbeddingSelector ? 'Embedding Provider & Model' : 'Provider & Model'}</h2>
+              <h2>{usesEmbeddingSelector ? 'Search Provider & Model' : 'Provider & Model'}</h2>
               <ProviderModelSelector
                 providers={config.providers}
                 selectedProvider={selectedProvider}
@@ -1002,7 +1084,12 @@ export default function App() {
                 <FileUpload
                   key={selectedPreset}
                   disabled={isActionBusy}
-                  onFilePathResolved={(filePath) => handleFieldChange('file_path', filePath)}
+                  onFilePathResolved={(filePath, fileName) => {
+                    handleFieldChange('file_path', filePath)
+                    if (selectedPreset === 'ocr_index_document' && !formValues.doc_id) {
+                      handleFieldChange('doc_id', slugifyFilename(fileName))
+                    }
+                  }}
                 />
               </section>
             </div>
@@ -1015,9 +1102,16 @@ export default function App() {
             excludeFields={
               selectedPreset === null
                 ? usesLlmSelector ? GENERIC_SELECTOR_FIELDS : undefined
-                : visibleFields.some((f) => f.name === 'file_path')
-                  ? new Set(['file_path'])
-                  : undefined
+                : selectedPreset === 'run_named_pipeline' && activePipeline
+                  ? (() => {
+                      const ex = new Set<string>()
+                      if (visibleFields.some((f) => f.name === 'file_path')) ex.add('file_path')
+                      if (usesLlmSelector) GENERIC_SELECTOR_FIELDS.forEach((f) => ex.add(f))
+                      return ex.size ? ex : undefined
+                    })()
+                  : visibleFields.some((f) => f.name === 'file_path')
+                    ? new Set(['file_path'])
+                    : undefined
             }
             fieldError={fieldError}
             submitError={submitError}
@@ -1037,6 +1131,14 @@ export default function App() {
                 documents={indexedDocuments}
                 isLoading={isLoadingIndexedDocuments}
                 error={indexedDocumentsError}
+                onClearAll={async () => {
+                  await clearIndexedDocuments()
+                  setIndexedDocuments([])
+                }}
+                onDeleteOne={async (docId: string) => {
+                  await deleteIndexedDocument(docId)
+                  setIndexedDocuments((prev) => prev.filter((d) => d.doc_id !== docId))
+                }}
               />
             </div>
           ) : null}
@@ -1045,16 +1147,25 @@ export default function App() {
         <div className="result-column">
           {workflowSteps.length > 0 ? <WorkflowStatus title="Workflow Status" steps={workflowSteps} /> : null}
 
-          {requestPreview !== null ? <JsonBlock title="Request Preview" value={requestPreview} /> : null}
+          {requestPreview !== null && !selectedPreset ? <JsonBlock title="Request Preview" value={requestPreview} /> : null}
 
-          {intermediateResult !== null ? <FormattedResult title="Intermediate OCR Result" value={intermediateResult} /> : null}
+          {intermediateResult !== null ? (
+            selectedPreset ? (
+              <details className="intermediate-result-disclosure">
+                <summary className="intermediate-result-toggle">Extracted text (intermediate step)</summary>
+                <FormattedResult title="Intermediate OCR Result" value={intermediateResult} />
+              </details>
+            ) : (
+              <FormattedResult title="Intermediate OCR Result" value={intermediateResult} />
+            )
+          ) : null}
 
           {submittedJob ? (
             <>
-              <JsonBlock title="Job Submission" value={submittedJob} />
+              {!selectedPreset ? <JsonBlock title="Job Submission" value={submittedJob} /> : null}
               <section className="card result-section">
                 <h2>Job Status</h2>
-                <JobPoller job={submittedJob} onJobUpdate={handleJobUpdate} />
+                <JobPoller job={submittedJob} onJobUpdate={handleJobUpdate} isPresetMode={selectedPreset !== null} />
               </section>
             </>
           ) : null}
@@ -1063,14 +1174,64 @@ export default function App() {
             <p className="message success">Done — your results are ready.</p>
           ) : null}
 
+          {selectedPreset === 'ocr_index_document' && responseData !== null && !activeError ? (
+            <p className="message info">
+              <strong>What&apos;s next?</strong> Your document is now indexed and ready to search.
+              Go back and choose <strong>Ask Your Documents</strong> to ask questions about it.
+            </p>
+          ) : null}
+
+          {selectedPreset === 'ocr_extract' && responseData !== null && !activeError ? (
+            <p className="message info">
+              <strong>What&apos;s next?</strong> You can{' '}
+              <strong>Extract &amp; Summarize</strong> or <strong>Extract Key Fields</strong> to analyse this text further,
+              or choose <strong>Index Document</strong> to save it for search and Q&amp;A.
+            </p>
+          ) : null}
+
           {responseData !== null ? <FormattedResult title="Response" value={responseData} /> : null}
 
-          {activeError ? <JsonBlock title="Error" value={{ error: activeError }} /> : null}
+          {activeError ? (
+            selectedPreset ? (
+              <p className="message error">{activeError}</p>
+            ) : (
+              <JsonBlock title="Error" value={{ error: activeError }} />
+            )
+          ) : null}
 
           {requestPreview === null && intermediateResult === null && submittedJob === null && responseData === null && !activeError ? (
             <section className="card welcome-card">
-              <h2>Welcome to DocuMind</h2>
-              <p className="field-help">Choose a workflow above to process your first document, or switch to advanced mode for full API access.</p>
+              {selectedPreset === 'ask_indexed_documents' && indexedDocuments.length === 0 && !isLoadingIndexedDocuments ? (
+                <>
+                  <h2>Index a document first</h2>
+                  <p className="field-help">
+                    <strong>Ask Your Documents</strong> searches documents you have already saved.
+                    You have none indexed yet.
+                  </p>
+                  <ol className="onboarding-steps">
+                    <li>Go back and choose <strong>Index Document</strong> to upload and save a file.</li>
+                    <li>Return here and type your question.</li>
+                  </ol>
+                </>
+              ) : selectedPreset === null ? (
+                <>
+                  <h2>Welcome to DocuMind</h2>
+                  <p className="field-help">
+                    DocuMind lets you extract, understand, and search the contents of your documents.
+                    A typical workflow has two steps:
+                  </p>
+                  <ol className="onboarding-steps">
+                    <li><strong>Index Document</strong> — upload a file so DocuMind can read and store it.</li>
+                    <li><strong>Ask Your Documents</strong> — type a question and get answers from your saved files.</li>
+                  </ol>
+                  <p className="field-help">Or choose any workflow above to get started right away.</p>
+                </>
+              ) : (
+                <>
+                  <h2>Ready when you are</h2>
+                  <p className="field-help">Fill in the form and click <strong>{activePreset?.title}</strong> to run.</p>
+                </>
+              )}
             </section>
           ) : null}
         </div>

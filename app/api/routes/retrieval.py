@@ -380,3 +380,16 @@ def get_documents() -> list[DocumentSummary]:
 )
 def delete_documents() -> None:
     retrieval_store.clear_store()
+
+
+@router.delete(
+    "/documents/{doc_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a single indexed document",
+    description="Remove all chunks belonging to the given document ID from the retrieval index.",
+    responses={404: {"model": ErrorResponse, "description": "Document not found."}},
+)
+def delete_document(doc_id: str) -> None:
+    found = retrieval_store.delete_document(doc_id)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document '{doc_id}' not found")

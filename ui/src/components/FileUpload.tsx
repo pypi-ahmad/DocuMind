@@ -3,7 +3,7 @@ import { type DragEvent, useRef, useState } from 'react'
 import { uploadDocument } from '../api'
 
 interface FileUploadProps {
-  onFilePathResolved: (filePath: string) => void
+  onFilePathResolved: (filePath: string, fileName: string) => void
   disabled?: boolean
 }
 
@@ -24,7 +24,7 @@ export function FileUpload({ onFilePathResolved, disabled = false }: FileUploadP
     try {
       const result = await uploadDocument(file)
       setUploadedName(file.name)
-      onFilePathResolved(result.file_path)
+      onFilePathResolved(result.file_path, file.name)
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Upload failed')
     } finally {
