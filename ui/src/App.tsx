@@ -976,8 +976,8 @@ export default function App() {
               />
               {CLOUD_PROVIDERS.has(selectedProvider) ? (
                 <p className="field-help byok-note">
-                  Entering a key here overrides the server `.env` fallback for this browser session only. Leaving it blank lets the backend
-                  use its configured `.env` key if available.
+                  Entering a key here overrides the server default for this browser session only. Leaving it blank uses the
+                  server&apos;s configured key if available.
                 </p>
               ) : null}
             </section>

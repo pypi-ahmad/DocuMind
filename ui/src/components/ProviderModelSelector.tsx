@@ -18,6 +18,14 @@ interface ProviderModelSelectorProps {
 
 const BYOK_PROVIDERS = new Set(['openai', 'gemini', 'anthropic'])
 
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  ollama: 'Ollama',
+  openai: 'OpenAI',
+  gemini: 'Google Gemini',
+  anthropic: 'Anthropic',
+  deepseek: 'DeepSeek',
+}
+
 export function ProviderModelSelector({
   providers,
   selectedProvider,
@@ -90,7 +98,7 @@ export function ProviderModelSelector({
           onChange={(e) => onProviderChange(e.target.value)}
         >
           {providers.map((p) => (
-            <option key={p.provider} value={p.provider}>{p.provider}</option>
+            <option key={p.provider} value={p.provider}>{PROVIDER_DISPLAY_NAMES[p.provider] ?? p.provider}</option>
           ))}
         </select>
       </label>
