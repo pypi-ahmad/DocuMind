@@ -945,10 +945,9 @@ export default function App() {
                 ))}
               </select>
             </label>
-            <p className="field-help">
-              Endpoint: {ACTION_ENDPOINTS[currentAction]}
-              {supportsJobMode ? ' (supports job mode)' : ''}
-            </p>
+            {supportsJobMode ? (
+              <p className="field-help">This action supports background job mode.</p>
+            ) : null}
           </div>
         </section>
       ) : (
