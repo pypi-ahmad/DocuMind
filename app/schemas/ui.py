@@ -108,6 +108,8 @@ class UIFormField(BaseModel):
     type: str
     required: bool
     description: str
+    label: str = ""
+    placeholder: str = ""
 
 
 class UIFormDescriptor(BaseModel):

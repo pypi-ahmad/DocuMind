@@ -108,3 +108,30 @@ export async function fetchPipelines(): Promise<PipelineSummary[]> {
 export async function fetchIndexedDocuments(): Promise<DocumentSummary[]> {
   return requestJson<DocumentSummary[]>('/retrieval/documents')
 }
+
+export async function uploadDocument(file: File): Promise<{ file_path: string }> {
+  const body = new FormData()
+  body.append('file', file)
+
+  const response = await fetch(`${API_BASE_URL}/ocr/upload`, {
+    method: 'POST',
+    body,
+  })
+
+  const text = await response.text()
+  let data: unknown = null
+
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      throw new Error('Backend returned a non-JSON response')
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, response.status))
+  }
+
+  return data as { file_path: string }
+}

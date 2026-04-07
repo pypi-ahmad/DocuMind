@@ -49,62 +49,62 @@ _ROUTE_MAP = UIRouteMap(
 _FORMS = UIFormsResponse(
     ocr_extract=UIFormDescriptor(
         fields=[
-            UIFormField(name="file_path", type="string", required=True, description="Path to the document file."),
-            UIFormField(name="engine", type="string", required=False, description="OCR engine override (optional)."),
-            UIFormField(name="prefer_structure", type="boolean", required=False, description="Prefer structured output."),
+            UIFormField(name="file_path", type="string", required=True, label="Document file", description="Path to the document on the server.", placeholder="e.g. /data/invoices/scan-001.pdf"),
+            UIFormField(name="engine", type="string", required=False, label="OCR engine", description="Override the automatic engine selection (leave blank for auto).", placeholder="e.g. deepseek-ocr"),
+            UIFormField(name="prefer_structure", type="boolean", required=False, label="Preserve formatting", description="Keep headings, lists, and tables when possible."),
         ]
     ),
     ocr_postprocess=UIFormDescriptor(
         fields=[
-            UIFormField(name="ocr_result", type="object", required=True, description="OCR extraction result dict."),
-            UIFormField(name="task", type="string", required=True, description="Post-process task: cleanup, summary, or extract_key_fields."),
-            UIFormField(name="provider", type="string", required=True, description="LLM provider name."),
-            UIFormField(name="model_name", type="string", required=True, description="Model name for post-processing."),
-            UIFormField(name="api_key", type="string", required=False, description="BYOK API key (optional)."),
-            UIFormField(name="temperature", type="number", required=False, description="Sampling temperature."),
-            UIFormField(name="max_output_tokens", type="integer", required=False, description="Maximum output tokens."),
+            UIFormField(name="ocr_result", type="object", required=True, label="OCR result", description="The OCR result from a previous extraction (JSON)."),
+            UIFormField(name="task", type="string", required=True, label="Task", description="What to do with the OCR text: cleanup, summary, or extract_key_fields.", placeholder="e.g. summary"),
+            UIFormField(name="provider", type="string", required=True, label="AI provider", description="Which AI provider to use.", placeholder="e.g. ollama, openai"),
+            UIFormField(name="model_name", type="string", required=True, label="Model", description="Name of the model to use.", placeholder="e.g. llama3, gpt-4o"),
+            UIFormField(name="api_key", type="string", required=False, label="API key", description="Your API key (optional, overrides the server key for this session)."),
+            UIFormField(name="temperature", type="number", required=False, label="Creativity", description="Controls randomness (lower = more focused, higher = more creative).", placeholder="e.g. 0.7"),
+            UIFormField(name="max_output_tokens", type="integer", required=False, label="Max response length", description="Maximum number of tokens in the response.", placeholder="e.g. 1024"),
         ]
     ),
     llm_generate=UIFormDescriptor(
         fields=[
-            UIFormField(name="provider", type="string", required=True, description="LLM provider name."),
-            UIFormField(name="model_name", type="string", required=True, description="Model name to use."),
-            UIFormField(name="prompt", type="string", required=True, description="Text prompt for generation."),
-            UIFormField(name="api_key", type="string", required=False, description="BYOK API key (optional)."),
-            UIFormField(name="temperature", type="number", required=False, description="Sampling temperature."),
-            UIFormField(name="max_output_tokens", type="integer", required=False, description="Maximum output tokens."),
+            UIFormField(name="provider", type="string", required=True, label="AI provider", description="Which AI provider to use.", placeholder="e.g. ollama, openai"),
+            UIFormField(name="model_name", type="string", required=True, label="Model", description="Name of the model to use.", placeholder="e.g. llama3, gpt-4o"),
+            UIFormField(name="prompt", type="string", required=True, label="Prompt", description="The text prompt to send to the model.", placeholder="e.g. Summarize the following text..."),
+            UIFormField(name="api_key", type="string", required=False, label="API key", description="Your API key (optional, overrides the server key for this session)."),
+            UIFormField(name="temperature", type="number", required=False, label="Creativity", description="Controls randomness (lower = more focused, higher = more creative).", placeholder="e.g. 0.7"),
+            UIFormField(name="max_output_tokens", type="integer", required=False, label="Max response length", description="Maximum number of tokens in the response.", placeholder="e.g. 1024"),
         ]
     ),
     retrieval_index_ocr=UIFormDescriptor(
         fields=[
-            UIFormField(name="doc_id", type="string", required=True, description="Unique document identifier."),
-            UIFormField(name="file_path", type="string", required=True, description="Path to the document file."),
-            UIFormField(name="ocr_engine", type="string", required=False, description="OCR engine override (optional)."),
-            UIFormField(name="prefer_structure", type="boolean", required=False, description="Prefer structured OCR output."),
-            UIFormField(name="embedding_provider", type="string", required=True, description="Embedding provider name."),
-            UIFormField(name="embedding_model_name", type="string", required=True, description="Embedding model name."),
-            UIFormField(name="api_key", type="string", required=False, description="BYOK API key (optional)."),
-            UIFormField(name="metadata", type="object", required=False, description="Optional document metadata."),
+            UIFormField(name="doc_id", type="string", required=True, label="Document ID", description="A unique name to identify this document.", placeholder="e.g. invoice-2024-001"),
+            UIFormField(name="file_path", type="string", required=True, label="Document file", description="Path to the document on the server.", placeholder="e.g. /data/invoices/scan-001.pdf"),
+            UIFormField(name="ocr_engine", type="string", required=False, label="OCR engine", description="Override the automatic engine selection (leave blank for auto).", placeholder="e.g. deepseek-ocr"),
+            UIFormField(name="prefer_structure", type="boolean", required=False, label="Preserve formatting", description="Keep headings, lists, and tables when possible."),
+            UIFormField(name="embedding_provider", type="string", required=True, label="Embedding provider", description="Provider for generating vector embeddings.", placeholder="e.g. ollama, openai"),
+            UIFormField(name="embedding_model_name", type="string", required=True, label="Embedding model", description="Name of the embedding model.", placeholder="e.g. nomic-embed-text"),
+            UIFormField(name="api_key", type="string", required=False, label="API key", description="Your API key (optional, overrides the server key for this session)."),
+            UIFormField(name="metadata", type="object", required=False, label="Metadata", description="Optional extra information to store with the document."),
         ]
     ),
     retrieval_qa=UIFormDescriptor(
         fields=[
-            UIFormField(name="query", type="string", required=True, description="Question to answer from indexed documents."),
-            UIFormField(name="provider", type="string", required=True, description="LLM provider name."),
-            UIFormField(name="model_name", type="string", required=True, description="Model name for generation."),
-            UIFormField(name="api_key", type="string", required=False, description="BYOK API key (optional)."),
-            UIFormField(name="retrieval_mode", type="string", required=False, description="Retrieval mode: dense or hybrid."),
-            UIFormField(name="top_k", type="integer", required=False, description="Number of retrieval results."),
-            UIFormField(name="use_rerank", type="boolean", required=False, description="Enable reranking of results."),
-            UIFormField(name="rerank_top_k", type="integer", required=False, description="Number of results after reranking."),
-            UIFormField(name="temperature", type="number", required=False, description="Sampling temperature."),
-            UIFormField(name="max_output_tokens", type="integer", required=False, description="Maximum output tokens."),
+            UIFormField(name="query", type="string", required=True, label="Your question", description="What would you like to know from your documents?", placeholder="e.g. What is the total amount due?"),
+            UIFormField(name="provider", type="string", required=True, label="AI provider", description="Which AI provider to use for generating the answer.", placeholder="e.g. ollama, openai"),
+            UIFormField(name="model_name", type="string", required=True, label="Model", description="Name of the model for generating answers.", placeholder="e.g. llama3, gpt-4o"),
+            UIFormField(name="api_key", type="string", required=False, label="API key", description="Your API key (optional, overrides the server key for this session)."),
+            UIFormField(name="retrieval_mode", type="string", required=False, label="Search method", description="How to search your documents: dense (vector) or hybrid (vector + keyword).", placeholder="e.g. hybrid"),
+            UIFormField(name="top_k", type="integer", required=False, label="Number of results", description="How many search results to consider.", placeholder="e.g. 5"),
+            UIFormField(name="use_rerank", type="boolean", required=False, label="Re-rank results", description="Re-score results for better relevance before answering."),
+            UIFormField(name="rerank_top_k", type="integer", required=False, label="Keep top N after re-ranking", description="How many top results to keep after re-ranking.", placeholder="e.g. 3"),
+            UIFormField(name="temperature", type="number", required=False, label="Creativity", description="Controls randomness (lower = more focused, higher = more creative).", placeholder="e.g. 0.7"),
+            UIFormField(name="max_output_tokens", type="integer", required=False, label="Max response length", description="Maximum number of tokens in the response.", placeholder="e.g. 1024"),
         ]
     ),
     pipeline_run=UIFormDescriptor(
         fields=[
-            UIFormField(name="pipeline_name", type="string", required=True, description="Name of the pipeline to execute."),
-            UIFormField(name="input", type="object", required=True, description="Pipeline input payload."),
+            UIFormField(name="pipeline_name", type="string", required=True, label="Pipeline name", description="Name of the pipeline to execute.", placeholder="e.g. ocr_extract_then_summary"),
+            UIFormField(name="input", type="object", required=True, label="Pipeline input", description="Input data for the pipeline (JSON)."),
         ]
     ),
 )

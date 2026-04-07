@@ -12,7 +12,9 @@ import {
   submitJob,
 } from './api'
 import { DynamicForm } from './components/DynamicForm'
+import { FileUpload } from './components/FileUpload'
 import { IndexedDocumentsList } from './components/IndexedDocumentsList'
+import { FormattedResult } from './components/FormattedResult'
 import { JobPoller } from './components/JobPoller'
 import { JsonBlock } from './components/JsonBlock'
 import { PipelineSelector } from './components/PipelineSelector'
@@ -65,38 +67,38 @@ const PRESET_OPTIONS: Array<{
 }> = [
   {
     key: 'ocr_extract',
-    title: 'OCR Extract',
-    description: 'Run OCR extraction with optional engine override and a structure preference.',
+    title: 'Extract Text',
+    description: 'Extract text from an image or PDF.',
     flowLabel: 'Single step',
   },
   {
     key: 'ocr_summary',
-    title: 'OCR + Summary',
-    description: 'Extract OCR first, then summarize the OCR result with an LLM provider.',
+    title: 'Extract & Summarize',
+    description: 'Extract text from a document and generate a summary.',
     flowLabel: 'Multi step',
   },
   {
     key: 'ocr_key_fields',
-    title: 'OCR + Key Fields',
-    description: 'Extract OCR first, then pull key structured fields from the OCR result.',
+    title: 'Extract Key Fields',
+    description: 'Extract text and identify key fields like dates, names, and amounts.',
     flowLabel: 'Multi step',
   },
   {
     key: 'ocr_index_document',
-    title: 'OCR Index Document',
-    description: 'Extract OCR content and index it into retrieval with sensible defaults.',
+    title: 'Index Document',
+    description: 'Extract text and save it for later search and Q&A.',
     flowLabel: 'Single step',
   },
   {
     key: 'ask_indexed_documents',
-    title: 'Ask Indexed Documents',
-    description: 'Query already-indexed documents with grounded retrieval QA defaults.',
+    title: 'Ask Your Documents',
+    description: 'Ask questions about your saved documents.',
     flowLabel: 'Single step',
   },
   {
     key: 'run_named_pipeline',
-    title: 'Run Named Pipeline',
-    description: 'Pick an existing pipeline when available, or enter a pipeline name manually.',
+    title: 'Run Pipeline',
+    description: 'Run a pre-configured multi-step workflow.',
     flowLabel: 'Single step',
   },
 ]
@@ -670,7 +672,7 @@ export default function App() {
           return
         }
 
-        setLoadError(error instanceof Error ? error.message : 'Failed to load UI contract')
+        setLoadError(error instanceof Error ? error.message : 'Could not reach the DocuMind server')
       } finally {
         if (isMounted) {
           setIsLoading(false)
@@ -831,7 +833,7 @@ export default function App() {
   if (isLoading) {
     return (
       <main className="app-shell">
-        <p className="message info">Loading backend capability metadata…</p>
+        <p className="message info">Connecting to DocuMind…</p>
       </main>
     )
   }
@@ -839,8 +841,8 @@ export default function App() {
   if (loadError || !config || !forms || !currentDescriptor) {
     return (
       <main className="app-shell">
-        <p className="message error">{loadError ?? 'Unable to load UI contract.'}</p>
-        <p>Backend base URL: {API_BASE_URL}</p>
+        <p className="message error">{loadError ?? 'Could not connect to the DocuMind server.'}</p>
+        <p className="field-help">Make sure the server is running and refresh the page. Backend URL: {API_BASE_URL}</p>
       </main>
     )
   }
@@ -850,8 +852,13 @@ export default function App() {
   return (
     <main className="app-shell">
       <header className="app-header">
-        <h1>{config.app_name}</h1>
-        <p>Version {config.version} · Backend: {API_BASE_URL}</p>
+        <div className="app-header-row">
+          <div>
+            <h1>{config.app_name}</h1>
+            <p>Version {config.version}</p>
+          </div>
+          <a href="https://github.com/pypi-ahmad/DocuMind/blob/main/docs/user-guide.md" target="_blank" rel="noopener noreferrer" className="header-link">Help & Docs</a>
+        </div>
       </header>
 
       <WorkflowPresetCards
@@ -862,42 +869,43 @@ export default function App() {
         onClear={() => setSelectedPreset(null)}
       />
 
-      <section className="layout-grid section-gap">
-        <section className="card">
-          <h2>Providers</h2>
-          <ul className="provider-list">
-            {config.providers.map((provider) => (
-              <li key={provider.provider} className="provider-item">
-                <strong>{provider.provider}</strong>
-                <div className="provider-flags">
-                  <span>requires_api_key: {String(provider.requires_api_key)}</span>
-                  <span>supports_byok: {String(provider.supports_byok)}</span>
-                  <span>has_env_key: {String(provider.has_env_key)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {selectedPreset === null ? (
+        <section className="layout-grid section-gap">
+          <section className="card">
+            <h2>Providers</h2>
+            <ul className="provider-list">
+              {config.providers.map((provider) => (
+                <li key={provider.provider} className="provider-item">
+                  <strong>{provider.provider}</strong>
+                  <div className="provider-flags">
+                    {provider.requires_api_key ? <span className="provider-badge badge-key">Requires API key</span> : <span className="provider-badge badge-ok">No key needed</span>}
+                    {provider.has_env_key ? <span className="provider-badge badge-ok">Server key configured</span> : provider.requires_api_key ? <span className="provider-badge badge-warn">No server key</span> : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        <section className="card">
-          <h2>OCR Engines</h2>
-          <ul className="inline-list">
-            {config.ocr.supported_ocr_engines.map((engine) => (
-              <li key={engine}>{engine}</li>
-            ))}
-          </ul>
-          <h2>Retrieval Modes</h2>
-          <ul className="inline-list">
-            {config.retrieval.supported_retrieval_modes.map((mode) => (
-              <li key={mode}>{mode}</li>
-            ))}
-          </ul>
+          <section className="card">
+            <h2>OCR Engines</h2>
+            <ul className="inline-list">
+              {config.ocr.supported_ocr_engines.map((engine) => (
+                <li key={engine}>{engine}</li>
+              ))}
+            </ul>
+            <h2>Retrieval Modes</h2>
+            <ul className="inline-list">
+              {config.retrieval.supported_retrieval_modes.map((mode) => (
+                <li key={mode}>{mode}</li>
+              ))}
+            </ul>
+          </section>
         </section>
-      </section>
+      ) : null}
 
       {selectedPreset === null ? (
         <section className="card section-gap">
-          <h2>Generic Action Form</h2>
+          <h2>Advanced API Form</h2>
           <div className="control-row">
             <label className="field-group" htmlFor="action-select">
               <span className="field-label">Select action</span>
@@ -966,6 +974,17 @@ export default function App() {
             </div>
           ) : null}
 
+          {selectedPreset !== null && visibleFields.some((f) => f.name === 'file_path') ? (
+            <div className="form-section-stack-item">
+              <section className="card">
+                <FileUpload
+                  disabled={isActionBusy}
+                  onFilePathResolved={(filePath) => handleFieldChange('file_path', filePath)}
+                />
+              </section>
+            </div>
+          ) : null}
+
           <DynamicForm
             actionLabel={activePreset?.title ?? ACTION_LABELS[currentAction]}
             descriptor={currentDescriptor}
@@ -977,6 +996,7 @@ export default function App() {
             disabled={isActionBusy}
             submitMode={submitMode}
             supportsJobMode={supportsJobMode}
+            isPresetMode={selectedPreset !== null}
             onSubmitModeChange={setSubmitMode}
             onChange={handleFieldChange}
             onSubmit={handleSubmit}
@@ -1010,12 +1030,15 @@ export default function App() {
             </>
           ) : null}
 
-          {responseData !== null ? <JsonBlock title="Response" value={responseData} /> : null}
+          {responseData !== null ? <FormattedResult title="Response" value={responseData} /> : null}
 
           {activeError ? <JsonBlock title="Error" value={{ error: activeError }} /> : null}
 
           {requestPreview === null && intermediateResult === null && submittedJob === null && responseData === null && !activeError ? (
-            <JsonBlock title="Response" value={{ message: 'Select a preset or generic action, then submit to see output.' }} />
+            <section className="card welcome-card">
+              <h2>Welcome to DocuMind</h2>
+              <p className="field-help">Choose a workflow above to process your first document, or switch to advanced mode for full API access.</p>
+            </section>
           ) : null}
         </div>
       </section>
