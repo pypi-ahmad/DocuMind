@@ -146,7 +146,7 @@ function parseFieldValue(field: UIFormField, rawValue: string | boolean | undefi
   if (field.type === 'integer') {
     const parsed = Number.parseInt(trimmed, 10)
     if (Number.isNaN(parsed)) {
-      throw new Error(`${field.name} must be a valid integer`)
+      throw new Error(`${humanFieldName(field.name)} must be a valid integer`)
     }
 
     return parsed
@@ -155,7 +155,7 @@ function parseFieldValue(field: UIFormField, rawValue: string | boolean | undefi
   if (field.type === 'number') {
     const parsed = Number(trimmed)
     if (Number.isNaN(parsed)) {
-      throw new Error(`${field.name} must be a valid number`)
+      throw new Error(`${humanFieldName(field.name)} must be a valid number`)
     }
 
     return parsed
@@ -165,7 +165,7 @@ function parseFieldValue(field: UIFormField, rawValue: string | boolean | undefi
     try {
       return JSON.parse(trimmed)
     } catch {
-      throw new Error(`${field.name} must be valid JSON`)
+      throw new Error(`${humanFieldName(field.name)} must be valid JSON`)
     }
   }
 
@@ -178,7 +178,7 @@ function buildPayload(fields: UIFormField[], values: FormState): Record<string, 
 
     if (parsedValue === undefined) {
       if (field.required) {
-        throw new Error(`${field.name} is required`)
+        throw new Error(`${humanFieldName(field.name)} is required`)
       }
 
       return payload
@@ -244,6 +244,22 @@ function redactPreviewSecrets(value: unknown): unknown {
   }
 
   return value
+}
+
+function humanFieldName(raw: string): string {
+  const map: Record<string, string> = {
+    provider: 'Provider',
+    model_name: 'Model',
+    api_key: 'API key',
+    pipeline_name: 'Pipeline',
+    file_path: 'Document file',
+    query: 'Question',
+    doc_id: 'Document ID',
+    top_k: 'Number of results',
+    temperature: 'Creativity',
+    max_output_tokens: 'Max response length',
+  }
+  return map[raw] ?? raw.replace(/_/g, ' ')
 }
 
 function shouldTreatAsFieldError(message: string): boolean {
@@ -391,11 +407,11 @@ export default function App() {
 
     if (selectorConfig) {
       if (!selectedProvider) {
-        throw new Error(`${selectorConfig.providerFieldName} is required`)
+        throw new Error(`${humanFieldName(selectorConfig.providerFieldName)} is required`)
       }
 
       if (!selectedModel) {
-        throw new Error(`${selectorConfig.modelFieldName} is required`)
+        throw new Error(`${humanFieldName(selectorConfig.modelFieldName)} is required`)
       }
 
       payload[selectorConfig.providerFieldName] = selectedProvider
@@ -408,7 +424,7 @@ export default function App() {
 
     if (usesPipelineSelector) {
       if (!selectedPipelineName.trim()) {
-        throw new Error('pipeline_name is required')
+        throw new Error('Pipeline is required')
       }
 
       payload.pipeline_name = selectedPipelineName.trim()
@@ -460,7 +476,7 @@ export default function App() {
     const extractPayload = buildPayload(visibleFields, formValues)
 
     if (!selectedProvider) {
-      throw new Error('provider is required')
+      throw new Error('Provider is required')
     }
 
     if (!selectedModel) {
@@ -1034,6 +1050,10 @@ export default function App() {
                 <JobPoller job={submittedJob} onJobUpdate={handleJobUpdate} />
               </section>
             </>
+          ) : null}
+
+          {responseData !== null && !activeError ? (
+            <p className="message success">Done — your results are ready.</p>
           ) : null}
 
           {responseData !== null ? <FormattedResult title="Response" value={responseData} /> : null}
