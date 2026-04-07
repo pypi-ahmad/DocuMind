@@ -368,6 +368,7 @@ the automated suite.
 
 | Document | Purpose |
 |----------|---------|
+| [docs/user-guide.md](docs/user-guide.md) | Full how-to guide — setup, every feature, curl examples, env vars |
 | [docs/architecture.md](docs/architecture.md) | Module map, request flows, and system boundaries |
 | [docs/api-overview.md](docs/api-overview.md) | Endpoint groups, job mode, and BYOK behavior |
 | [docs/workflows.md](docs/workflows.md) | Example payloads and end-to-end workflow walkthroughs |
