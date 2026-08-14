@@ -351,3 +351,5 @@ Benchmark suites are defined in `app/eval/benchmarks.py` with inputs, expected o
 ## License
 
 [MIT](LICENSE)
+
+<p align="center">Made with ❤️ by Ahmad Mujtaba</p>
